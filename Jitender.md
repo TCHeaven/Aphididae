@@ -490,8 +490,70 @@ nano vc2alle-part.py #appears to be generating an allele table for a single samp
 	#The number of rows in the output file would be equal to the number of samples specified in the samples list (which is ['S98', 'K43', 'K40'] in the current implementation). Each row would correspond to one sample, and the columns would contain the allele information for that sample at each position.
 ```
 
+# Reproducing the work done by Jitender
+Unless stated otherwise work was performed from the directory: /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
 
+Collecting data:
+```bash
+mkdir -p snp_calling/Myzus/persicae/biello/gatk/filtered
+cp /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mperc-analysis-jitender/saskia/vcffilesafterfiltering/210s.M_persicae.onlySNPs.vcf.gz snp_calling/Myzus/persicae/biello/gatk/filtered/.
 
+MYZPE13164_O_EIv2.1.annotation.gff3
+```
+#### P_distance
+p-distance  is the proportion (p) of nucleotide sites at which two sequences being compared are different. It is obtained by dividing the number of nucleotide differences by the total number of nucleotides compared.
 
+distmat calculates the evolutionary distance between every pair of sequences in a multiple sequence alignment. A variety of methods to estimate distance may be selected, and differ in how they correct the observed substitution rates to more accurately reflect the true evolutionary distance. An output file containing a distance matrix for the set of sequences is written. The distances are expressed in terms of the number of substitutions per 100 bases or amino acids.
+```bash
+source package /nbi/software/testing/bin/bcftools-1.8
+interactive
+bcftools stats snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.vcf.gz > snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs_stats.txt
+
+mkdir snp_calling/Myzus/persicae/biello/gatk/p_distance
+tools/VCF2Dis -InPut snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.vcf.gz -OutPut snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis.mat
+
+for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.vcf.gz); do
+echo $vcf
+ProgDir=~/git_repos/Wrappers/NBI
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance
+Outfile=p_dis.mat
+sbatch $ProgDir/run_VCF2Dis.sh $vcf $OutDir $Outfile
+done
+#Submitted batch job 54236748
+```
+Generate an ID based p-distmat in for R
+```bash
+source package /nbi/software/production/bin/python-2.7.11
+python
+```
+```python
+from collections import defaultdict
+# load distance matrix
+acc = defaultdict(list)
+acc_order = []
+with open('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis.mat') as inp:
+    next(inp)
+    for line in inp:
+        A = line.strip().split()
+        acc[A[0]] = A[1:]
+        acc_order.append(A[0])
+
+assert len(acc) == 210
+
+# write the distance matrix in a desired format
+with open("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_mperc.csv", "w") as outf:
+    outf.write(",".join(["ID"] + acc_order) + "\n")
+    for a in acc_order:
+        outf.write(",".join([a] + acc[a]) + "\n")
+
+print("Done")
+
+source package /nbi/software/production/bin/python-3.7.2
+```
+#### Corehunter
+
+```bash
+
+```
 
 
