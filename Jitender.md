@@ -296,6 +296,8 @@ This level of the directory structure looks to be where genic SNPs are identifie
 subset-genes-gff3-scaffolds1-6.py #extract gene annotation information for chromosomes 1 to 6 and writes this to a new gff3 file
 MYZPE13164_O_EIv2.1.annotation.gff3 #input for subset-genes-gff3-scaffolds1-6.py
 MYZPE13164_O_EIv2.1.annotation_genes_scaff1-6.gff3 #output of subset-genes-gff3-scaffolds1-6.py
+
+
 ```
 Finding genic SNPs:
 ```bash
