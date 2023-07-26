@@ -1660,7 +1660,101 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
     fi
 done
 
-#!/bin/bash 
+for sample in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled/qualimap/*genome_results.txt); do
+cov=$(grep 'mean coverageData' $sample | rev | cut -d ' ' -f1 | rev )
+name=$(echo $sample | cut -d '/' -f12)
+echo $name $cov
+done
+
+#NOTE: to save space the script has been edited to delete input files upon production of outputs. - in this case this will just remove the symlinks - make sure that you check that it runs correctly first before deleting all input data
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
+    sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
+    Fread=$(ls $ReadDir/*_1*fq.gz)
+    Rread=$(ls $ReadDir/*_2*fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=/jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}
+    OutFile=${sample}_subsampled_trimmed
+    Quality=20
+    Length=50
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'trim_g'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'trim_g'  | wc -l)
+    done
+    mkdir -p $OutDir
+    echo $sample >> logs/trim_galore_report.txt
+    sbatch $ProgDir/run_trim_galore.sh $OutDir $OutFile $Quality $Length $Fread $Rread $Fread2 $Rread2  2>&1 >> logs/trim_galore_report.txt
+done 
+
+if [ -e ${OutDir}/${OutFile}_1.fq.gz ] && [ -e ${OutDir}/${OutFile}_2.fq.gz ]; then
+echo Outputs detected
+else
+echo Outputs not detected
+fi
+
+#Symlink files to the main Aphididae directory
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
+    sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
+    Dir=/jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}
+    OutDir=$(echo $ReadDir | sed 's@raw_data@dna_qc@g')/trim_galore
+    mkdir -p $OutDir
+    ln -s /jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}/* $OutDir/.
+done
+
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1*fq.gz)
+    Rread=$(ls $ReadDir/*_2*fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=$(echo $ReadDir)
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    done
+    echo $ReadDir >> logs/raw_qualimap_report.txt
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done
+#REMEMBER TO REMOVE THE UNTRIMMED READ FILES ONCE THE QUALITY OF TRIMMED FILES IS CONFIRMED
+
+for sample in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore/qualimap/*genome_results.txt); do
+cov=$(grep 'mean coverageData' $sample | rev | cut -d ' ' -f1 | rev )
+name=$(echo $sample | cut -d '/' -f12)
+echo $name $cov
+done
+
+#PROBLEM CASES:
+#SUS_1X  14.1104X            Missing 
+#SUS_4106a   14.7635X            SUS_4106a   27.6117X
+#SUS_4225A   14.8582X            SUS_4225A   28.2084X
+#SUS_NS  28.7203X            SUS_NS  27.3258X
+#4106a   29.4021X            4106a   28.3355X
+#NIC_410G    14.847X         NIC_410G    28.3362X
+#NIC_410R    14.9603X            NIC_410R    28.4638X
+#S116    14.7151X            S116    5.2176X
+
+
+
+
+
+
+source package 04b61fb6-8090-486d-bc13-1529cd1fb791
+trim_galore --fastqc --quality 20 --gzip --cores 16 
 
 # Input variables
 mean_coverage=10  # Mean coverage of all reads
