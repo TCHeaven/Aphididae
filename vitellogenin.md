@@ -105,6 +105,15 @@ ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/p
 #VCF SNP file, gene region, for 193 individuals:
 ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/dedup_MYZPE13164_O_EIv2.1_0213490_snps.vcf
 #VCF SNP file, CDS region, for 193 individuals:
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/dedup_MYZPE13164_O_EIv2.1_CDS_0213490.1_snps.vcf
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/dedup_MYZPE13164_O_EIv2.1_CDS_0213490.2_snps.vcf
 
 
+#Convert fasta to single line format:
+awk ' {if (NR==1) {print $0} else {if ($0 ~ /^>/) {print "\n"$0} else {printf $0}}}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.gene.fa > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.gene.fa
+awk ' {if (NR==1) {print $0} else {if ($0 ~ /^>/) {print "\n"$0} else {printf $0}}}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.CDS.fa > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa
+
+grep -A 1 'MYZPE13164_O_EIv2.1_0213490' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.gene.fa > MYZPE13164_O_EIv2.1_0213490.fa
+grep -A 1 'MYZPE13164_O_EIv2.1_0213490.1' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa > MYZPE13164_O_EIv2.1_0213490.1.fa
+grep -A 1 'MYZPE13164_O_EIv2.1_0213490.2' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa > MYZPE13164_O_EIv2.1_0213490.2.fa
 ```

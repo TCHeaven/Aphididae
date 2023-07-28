@@ -178,7 +178,75 @@ singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybe
 
 source package 01ef5a53-c149-4c9e-b07d-0b9a46176cc0
 bgzip -c snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz | wc -l #31,637,658 there are many duplicate SNPs
 bgzip -c /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf > /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz
+zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz | wc -l #31,637,658
+
+#deduplicated files with:
+Files=("snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz" "/jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz")
+for file in "${Files[@]}"; do
+    singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 /hpc-home/did23faz/git_repos/Scripts/NBI/remove_duplicate_snps.py $file 
+done
+
+#check intersect of original and deduplicated files: 
+bcftools isec  -p temp_dir /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz_2 
+#CONFIRMS THERE WERE DUPLICATED ENTRIES IN THE ORIGINAL AND THAT THESE HAVE BEEN SUCESSFULLY REMOVED, WHILST RETAINING ONE COPY
+
+for file in "${Files[@]}"; do
+    mv ${file}_2 $file 
+done
+
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz | wc -l #6,783,065
+zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz | wc -l #6,783,065
+```
+Extract CDS/exon/UTR regions region SNPs:
+```bash
+grep '#\|CDS\|exon\|five_prime_UTR\|three_prime_UTR' snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 > snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3
+wc -l snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3
+#806,274
+
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
+-a snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz \
+-b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
+-header > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf
+
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
+-a snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs.vcf.gz \
+-b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
+-header > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf
+
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
+-a /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs.vcf.gz \
+-b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
+-header > /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf
+
+source package 01ef5a53-c149-4c9e-b07d-0b9a46176cc0
+bgzip -c snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz
+bgzip -c snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz
+bgzip -c /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf > /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz | wc -l #8,581,242 many duplicates
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz | wc -l #8,581,242 many duplicates
+zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz | wc -l #8,581,242 many duplicates
+
+rm snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf 
+
+#deduplicated files with:
+Files=("snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz" "snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz" "/jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz")
+for file in "${Files[@]}"; do
+    singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 /hpc-home/did23faz/git_repos/Scripts/NBI/remove_duplicate_snps.py $file 
+done
+
+#check intersect of original and deduplicated files: 
+bcftools isec  -p temp_dir /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz_2 
+#CONFIRMS THERE WERE DUPLICATED ENTRIES IN THE ORIGINAL AND THAT THESE HAVE BEEN SUCESSFULLY REMOVED, WHILST RETAINING ONE COPY
+
+for file in "${Files[@]}"; do
+    mv ${file}_2 $file 
+done
+
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz | wc -l #1,925,747
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz | wc -l #1,925,747
+zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz | wc -l #1,925,747
 ```
 Extract CDS region SNPs:
 ```bash
@@ -205,33 +273,32 @@ source package 01ef5a53-c149-4c9e-b07d-0b9a46176cc0
 bgzip -c snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz
 bgzip -c snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz
 bgzip -c /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf > /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz
+
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz | wc -l #3,007,451 there do not appear to be duplicates, but I dnt know if I trust this now...
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz | wc -l #3,007,451
+zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz | wc -l #3,007,451
+
+rm snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf
+
+#deduplicated files with:
+Files=("snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz" "snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz" "/jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz")
+for file in "${Files[@]}"; do
+    singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 /hpc-home/did23faz/git_repos/Scripts/NBI/remove_duplicate_snps.py $file 
+done
+
+#check intersect of original and deduplicated files: 
+bcftools isec  -p temp_dir /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz_2 
+#CONFIRMS THERE WERE DUPLICATED ENTRIES IN THE ORIGINAL AND THAT THESE HAVE BEEN SUCESSFULLY REMOVED, WHILST RETAINING ONE COPY
+
+for file in "${Files[@]}"; do
+    mv ${file}_2 $file 
+done
+
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz | wc -l #1,240,584
+zcat snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz | wc -l #1,240,584
+zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz | wc -l #1,240,584
 ```
-Extract CDS region SNPs:
-```bash
-grep '#\|CDS\|exon\|five_prime_UTR\|three_prime_UTR' snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 > snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3
-wc -l snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3
-#806,274
 
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
--a snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz \
--b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
--header > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf
-
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
--a snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs.vcf.gz \
--b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
--header > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf
-
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
--a /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs.vcf.gz \
--b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
--header > /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf
-
-source package 01ef5a53-c149-4c9e-b07d-0b9a46176cc0
-bgzip -c snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz
-bgzip -c snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz
-bgzip -c /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf > /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz
-```
 
 ## P_distance
 A distance matrix was calculated for the samples.
@@ -391,6 +458,8 @@ done
 #54584287
 
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
+```
+```python
 from collections import defaultdict
 # load distance matrix
 acc = defaultdict(list)
@@ -1730,7 +1799,6 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
     ls ${ReadDir}/qualimap/*genome_results.txt
     fi
 done
-#REMEMBER TO REMOVE THE UNTRIMMED READ FILES ONCE THE QUALITY OF TRIMMED FILES IS CONFIRMED
 
 for sample in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore/qualimap/*genome_results.txt); do
 cov=$(grep 'mean coverageData' $sample | rev | cut -d ' ' -f1 | rev )
@@ -1739,16 +1807,154 @@ echo $name $cov
 done
 
 #PROBLEM CASES:
-#SUS_1X  14.1104X            Missing 
-#SUS_4106a   14.7635X            SUS_4106a   27.6117X
+#SUS_1X  14.1104X            Missing                            #There is only one subsampled fastq file for this sample, as the precursor files have been deleted I will need to repeat the pipeline for this sample >:( SRR10199545
+#SUS_4106a   14.7635X            SUS_4106a   27.6117X           #rerunning coverage calc. for the untrimmed version of these where coverage has somehow gone up following trimming... which makes no sense.
 #SUS_4225A   14.8582X            SUS_4225A   28.2084X
 #SUS_NS  28.7203X            SUS_NS  27.3258X
 #4106a   29.4021X            4106a   28.3355X
 #NIC_410G    14.847X         NIC_410G    28.3362X
 #NIC_410R    14.9603X            NIC_410R    28.4638X
-#S116    14.7151X            S116    5.2176X
+#S116    14.7151X            S116    5.2176X                     #messed up somehow... folder has extract files in it that were produced at a time that does not make sense to me, coverage reports seem to dissagree whether coverage is very low or high - think I have to repeat for this sample. SRR13326477
 
+#THESE PROBLEM CASES NEED FURTHER INVESTIGATION, SUBSAMPLED UNTRIMMED FILES WERE DELETED FOR ALL OTHER SAMPLES TO SAVE SPACE
+#ANALYSIS TO THIS POINT WAS REPEATED FOR SUS_1X AND S116
 
+for ReadDir in $(ls -d  /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/M_persicae/*); do
+    if [ ! -e temp_cov/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1*fq.gz)
+    Rread=$(ls $ReadDir/*_2*fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_cov
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    done
+    echo $ReadDir >> logs/raw_qualimap_report.txt
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done
+
+################################
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*_2); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1.fq.gz)
+    Rread=$(ls $ReadDir/*_2.fq.gz)
+    Fread2=$(ls $ReadDir/*_3.fq.gz)
+    Rread2=$(ls $ReadDir/*_4.fq.gz)
+    OutDir=$(echo $ReadDir)
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    done
+    echo $ReadDir >> logs/raw_qualimap_report.txt
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done
+
+source package /tgac/software/testing/bin/seqkit-0.10.0
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*_2); do
+sample=$(echo $ReadDir | rev | cut -d '/' -f1 | rev)
+coverage=$(grep 'mean coverageData' $ReadDir/qualimap/*genome_results.txt | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
+if (( $(echo "$coverage < 15" | bc -l) )); then
+    echo $sample has low coverage: $coverage >> Reports/Low_coverage_report2.txt
+fi
+target_coverage=15
+subsampling_ratio=$(bc <<< "scale=2; $target_coverage / $coverage")
+for reads in $(ls $ReadDir/*.fq.gz); do
+OutFile=$(basename $reads | cut -d '.' -f1)_subsampled.fq.gz
+OutDir=${ReadDir}/subsampled
+mkdir $OutDir
+echo $sample raw reads have average coverage of ${coverage}, these were subsampled with ratio $subsampling_ratio >> Reports/Subsampling_report.txt
+seqkit sample -s 1234 -p $subsampling_ratio -o ${OutDir}/${OutFile} $reads
+done
+done
+
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*_2/subsampled); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1*fq.gz)
+    Rread=$(ls $ReadDir/*_2*fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=$(echo $ReadDir)
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    done
+    echo $ReadDir >> logs/raw_qualimap_report.txt
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done
+
+#NOTE: to save space the script has been edited to delete input files upon production of outputs. - make sure that you check that it runs correctly first before deleting all input data
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*_2/subsampled); do
+    sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
+    Fread=$(ls $ReadDir/*_1*fq.gz)
+    Rread=$(ls $ReadDir/*_2*fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=/jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}
+    OutFile=${sample}_subsampled_trimmed
+    Quality=20
+    Length=50
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'trim_g'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'trim_g'  | wc -l)
+    done
+    mkdir -p $OutDir
+    echo $sample >> logs/trim_galore_report.txt
+    sbatch $ProgDir/run_trim_galore.sh $OutDir $OutFile $Quality $Length $Fread $Rread $Fread2 $Rread2  2>&1 >> logs/trim_galore_report.txt
+done 
+
+if [ -e ${OutDir}/${OutFile}_1.fq.gz ] && [ -e ${OutDir}/${OutFile}_2.fq.gz ]; then
+echo Outputs detected
+else
+echo Outputs not detected
+fi
+
+#Symlink files to the main Aphididae directory
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
+    sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
+    Dir=/jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}
+    OutDir=$(echo $ReadDir | sed 's@raw_data@dna_qc@g')/trim_galore
+    mkdir -p $OutDir
+    ln -s /jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}/* $OutDir/.
+done
+################################
 
 
 

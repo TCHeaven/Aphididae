@@ -120,7 +120,7 @@ ln -s /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/CloneORNA/SRR* /ji
 ln -s /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/CloneORNA/ERR1661483* /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/RNA_Seq/Mathers2020/.
 ```
 ## Quality control
-The raw RNAseq reads were subjected to a quality control check using FastQC.
+The raw RNAseq reads were subjected to a quality control check using FastQC:
 ```bash
 for RawData in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/RNA_Seq/Mathers2020/*.fastq.gz); do
 ProgDir=~/git_repos/Wrappers/NBI
@@ -130,13 +130,14 @@ echo $OutFile
 sbatch $ProgDir/run_fastqc.sh $RawData $OutDir $OutFile
 done
 ```
+The raw RNAseq reads were trimmed to remove adapters an low quality regions:
 ```bash
 #NOTE: to save space the script has been edited to delete input files upon production of outputs. - make sure that you check that it runs correctly first before deleting all input data - in this case only the symlinks should be deleted, these will be replaced afterwards
 for Fread in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/RNA_Seq/Mathers2020/*1.fastq.gz); do
     Rread=$(ls $Fread | sed 's@_1.@_2.@g')
     Fread2=$(ls $Fread | sed 's@_1.@_3.@g')
     Rread2=$(ls $Fread | sed 's@_1.@_4.@g')
-    OutDir=$(dirname $Fread | sed 's@raw_data@rna_qc@g')
+    OutDir=$(dirname $Fread | sed 's@raw_data@rna_qc@g')trim_galore
     OutFile=$(basename $Fread _1.fastq.gz)
     Quality=20
     Length=20
@@ -152,19 +153,31 @@ for Fread in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_
     echo $OutFile >> logs/rna_trim_galore_report.txt
     sbatch $ProgDir/run_trim_galore.sh $OutDir $OutFile $Quality $Length $Fread $Rread $Fread2 $Rread2  2>&1 >> logs/rna_trim_galore_report.txt
 done
-```
 
-Trim Galore v0.4.5, retaining reads where both members of the pair are at least 20-bp long.
-```bash
-
+ln -s /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/CloneORNA/SRR* /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/RNA_Seq/Mathers2020/.
+ln -s /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/CloneORNA/ERR1661483* /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/RNA_Seq/Mathers2020/.
 ```
+The trimmed reads were then re-assessed for quality following trimming, using FastQC:
 ```bash
-OutDir=
-OutFile=
-Freads_list=
-Rreads_list=
+for QCData in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/rna_qc/Myzus/persicae/RNA_Seq/Mathers2020/trim_galore/*.fq.gz); do
+ProgDir=~/git_repos/Wrappers/NBI
+OutFile=$(basename $QCData .fastq.gz)
+OutDir=$(dirname $QCData)
+echo $OutFile
+sbatch $ProgDir/run_fastqc.sh $QCData $OutDir $OutFile
+done
+```
+## Transcriptome assembly
+Trinity was run to assembly a transcriptome for M. persicae using the RNASeq data, this wrapper script will do this twice: once with the --genome_guided_bam flag, and once without reference to the genome assembly.
+```bash
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/rna_qc/Myzus/persicae/RNA_Seq/Mathers2020/trim_galore); do
+OutDir=$(echo $ReadDir | sed 's@rna_qc@assembly/transcriptome@g' | sed 's@rna_qc@trim_galore/trinity_2.9.1@g')
+OutFile=Mathers2020_25libs
+Freads_list=$(ls ${ReadDir}/*.fq.gz | grep '_1.fq.gz' | tr '\n' ',')
+Rreads_list=$(ls ${ReadDir}/*.fq.gz | grep '_2.fq.gz' | tr '\n' ',')
 Max_intron=10000
-Genome=
+Genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
 ProgDir=~/git_repos/Wrappers/NBI
 sbatch $ProgDir/run_trinity.sh $OutDir $OutFile $Freads_list $Rreads_list $Max_intron $Genome
+done #55978977, 56025935
 ```
