@@ -171,13 +171,30 @@ done
 Trinity was run to assembly a transcriptome for M. persicae using the RNASeq data, this wrapper script will do this twice: once with the --genome_guided_bam flag, and once without reference to the genome assembly.
 ```bash
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/rna_qc/Myzus/persicae/RNA_Seq/Mathers2020/trim_galore); do
-OutDir=$(echo $ReadDir | sed 's@rna_qc@assembly/transcriptome@g' | sed 's@rna_qc@trim_galore/trinity_2.9.1@g')
+OutDir=$(echo $ReadDir | sed 's@rna_qc@assembly/transcriptome@g' | sed 's@RNA_Seq/Mathers2020/trim_galore@trinity_2.9.1@g')
+mkdir -p $OutDir
 OutFile=Mathers2020_25libs
-Freads_list=$(ls ${ReadDir}/*.fq.gz | grep '_1.fq.gz' | tr '\n' ',')
-Rreads_list=$(ls ${ReadDir}/*.fq.gz | grep '_2.fq.gz' | tr '\n' ',')
+Freads_list=$(ls ${ReadDir}/*.fq.gz | grep '_1.fq.gz' | grep -v 'ERR1661483' | tr '\n' ','| sed 's/,$//')
+Rreads_list=$(ls ${ReadDir}/*.fq.gz | grep '_2.fq.gz' | grep -v 'ERR1661483' | tr '\n' ','| sed 's/,$//')
+SSFreads_list=$(ls ${ReadDir}/*.fq.gz | grep '_1.fq.gz' | grep 'ERR1661483' | tr '\n' ','| sed 's/,$//')
+SSRreads_list=$(ls ${ReadDir}/*.fq.gz | grep '_2.fq.gz' | grep 'ERR1661483' | tr '\n' ','| sed 's/,$//')
 Max_intron=10000
 Genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
 ProgDir=~/git_repos/Wrappers/NBI
-sbatch $ProgDir/run_trinity.sh $OutDir $OutFile $Freads_list $Rreads_list $Max_intron $Genome
-done #55978977, 56025935
+#sbatch $ProgDir/run_trinity.sh $OutDir $OutFile $Freads_list $Rreads_list $SSFreads_list $SSRreads_list $Max_intron $Genome
+done #56025935, 56149160
+
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/rna_qc/Myzus/persicae/RNA_Seq/Mathers2020/trim_galore); do
+OutDir=$(echo $ReadDir | sed 's@rna_qc@assembly/transcriptome@g' | sed 's@RNA_Seq/Mathers2020/trim_galore@trinity_2.9.1@g')
+mkdir -p $OutDir
+OutFile=Mathers2020_25libs
+Freads_list=$(ls ${ReadDir}/*.fq.gz | grep '_1.fq.gz' | grep -v 'ERR1661483' | tr '\n' ','| sed 's/,$//')
+Rreads_list=$(ls ${ReadDir}/*.fq.gz | grep '_2.fq.gz' | grep -v 'ERR1661483' | tr '\n' ','| sed 's/,$//')
+SSFreads_list=$(ls ${ReadDir}/*.fq.gz | grep '_1.fq.gz' | grep 'ERR1661483' | tr '\n' ','| sed 's/,$//')
+SSRreads_list=$(ls ${ReadDir}/*.fq.gz | grep '_2.fq.gz' | grep 'ERR1661483' | tr '\n' ','| sed 's/,$//')
+Max_intron=10000
+Genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+ProgDir=~/git_repos/Wrappers/NBI
+sbatch $ProgDir/run_trinity.sh $OutDir $OutFile $Freads_list $Rreads_list $SSFreads_list $SSRreads_list $Max_intron $Genome
+done #56149358, 56149444, 56150138
 ```

@@ -262,7 +262,7 @@ echo done
 #NOTE: The script prefixes output files with the slurm job number
 
 #Remove job no. prefixes:
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/*_hom_MYZPE13164_O_EIv2.1_*.fa); do
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/ -name "*_hom_MYZPE13164_O_EIv2.1_*.fa" -exec readlink -f {} \;); do
 newname=$(basename $file | rev | cut -d '_' -f1,2,3,4,5 | rev)
 #echo $file
 #echo /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/${newname}
@@ -272,114 +272,129 @@ done
 #Check that none of the jobs failed:
 for job in $(grep 'Submitted' logs/run_create_sample_sequence_log_28072023.txt | cut -d ' ' -f4); do
 sacct -j $job --format=JobID,JobName,ReqMem,MaxRSS,TotalCPU,AllocCPUS,Elapsed,State,ExitCode | grep -v 'COMPLETED\|----------\|State'
-done
+done #No jobs failed
 
 #Check that the multifasta have all samples, and all genes are the expected lengths: 
 #NOTE: insertions and deletions will not be captured as these are filtered out of the vcf - other than the passing SNPs the variant genes will be shown as the same as the reference.
 for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas -name "hom*.fa" -exec readlink -f {} \;); do
     echo $file
     grep '>' $file | wc -l
-done #ERROR
-
-/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/homo_gene_fastas/hom_MYZPE13164_O_EIv2.1_0317870.fa
-1164
-55842671
-55895997
+done #All files have the expected length 194
 
 awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0010900.fa #All samples are same length as expected
-awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0110900.fa
-awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0210900.fa
-awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0310900.fa
-
-#0267740.fa
-55836988
-Chromosome: scaffold_5  Gene Name: MYZPE13164_O_EIv2.1_0317870  Start Position: 1684933 Stop Position: 1780394
-fails at 95th snp with gene length 0?
+awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0110900.fa #All samples are same length as expected
+awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0210900.fa #All samples are same length as expected
+awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0310900.fa #All samples are same length as expected
 ```
 For heterozygous mutations:
 ```bash
 mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas
+mkdir logs/create_sample_sequence_files_het
 for vcf in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/ -name "*_snps.vcf" -exec readlink -f {} \;); do
-    Jobs=$(squeue -u did23faz | wc -l)
-    while [ $Jobs -gt 99 ]; do
-    sleep 15s
-    printf "."
-    Jobs=$(squeue -u did23faz | wc -l)
-    done 
-    gene_info_file=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/gene_info.txt
-    reference_fasta=/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.fa
-    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas
-    ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-#    GeneName=$(echo $vcf | cut -d '/' -f15 | cut -d '_' -f2,3,4,5 | grep -e MYZPE13164_O_EIv2.1_0035290)
-    GeneName=$(echo $vcf | cut -d '/' -f15 | cut -d '_' -f2,3,4,5)
-    if [ -n "$GeneName" ]; then
-     echo "$GeneName" >> logs/run_create_sample_sequence_het_log.txt
-     vcf_file=$vcf
-     OutFile=${GeneName}.fa
-     echo $vcf_file >> logs/run_create_sample_sequence_het_log.txt
-     echo $OutFile >> logs/run_create_sample_sequence_het_log.txt
-     sbatch $ProgDir/run_create_sample_sequence_files_het.sh $vcf_file $OutDir $OutFile $reference_fasta $gene_info_file 2>&1 >> logs/run_create_sample_sequence_het_log.txt
-    fi
+Jobs=$(squeue -u did23faz | wc -l)
+while [ $Jobs -gt 99 ]; do
+sleep 15s
+printf "."
+Jobs=$(squeue -u did23faz | wc -l)
+done 
+gene_info_file=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/gene_info.txt
+reference_fasta=/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.gene.fa
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas
+ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
+GeneName=$(echo $vcf | cut -d '/' -f15 | cut -d '_' -f2,3,4,5)
+if [ -n "$GeneName" ]; then
+vcf_file=$vcf
+OutFile=het_${GeneName}.fa
+if [ ! -e ${OutDir}/${OutFile} ]; then
+echo $GeneName
+echo "$GeneName" >> logs/run_create_sample_sequence_het_log_01082023.txt
+echo $vcf_file >> logs/run_create_sample_sequence_het_log_01082023.txt
+echo $OutFile >> logs/run_create_sample_sequence_het_log_01082023.txt
+sbatch $ProgDir/run_create_sample_sequence_files_het.sh $vcf_file $OutDir $OutFile $reference_fasta $gene_info_file 2>&1 >> logs/run_create_sample_sequence_het_log_01082023.txt 
+else
+echo $GeneName already run
+fi
+fi
 done
 echo done
 #NOTE: The above script will replace missing SNP data with Ns, the actual nucleotide could be reference or alternative, probably best not to use these positions for plotting trees etc., or exclude those samples with missing data from these.
+#NOTE: Slurm files are output to logs/create_sample_sequence_files_het/. the script prints and error message if the reference base is not what is expected.
+#NOTE: The script prefixes output files with the slurm job number
+
+#Remove job no. prefixes:
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas/ -name "*_het_MYZPE13164_O_EIv2.1_*0213490.fa" -exec readlink -f {} \;); do
+newname=$(basename $file | rev | cut -d '_' -f1,2,3,4,5 | rev)
+#echo $file
+#echo /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/${newname}
+mv $file /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas/${newname}
+done
+
 #Reverse engineering the sequences in this way means that they are effectively already aligned and trimmed, so there is no need to use MAFFT on the multi fastas follwed by Trim-Al.
 
 #Check that none of the jobs failed:
-for job in $(grep 'Submitted' logs/run_create_sample_sequence_het_log.txt | cut -d ' ' -f4); do
+for job in $(grep 'Submitted' logs/run_create_sample_sequence_het_log_01082023.txt | cut -d ' ' -f4); do
 sacct -j $job --format=JobID,JobName,ReqMem,MaxRSS,TotalCPU,AllocCPUS,Elapsed,State,ExitCode | grep -v 'COMPLETED\|----------\|State'
 done
 ```
 #### Create mutant CDS multifastas
 For homozygous mutant mutations:
 ```bash
-for gene_multifasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/homo_gene_fastas -name "hom_MYZPE13164_O_EIv2.1_*.fa" -exec readlink -f {} \;); do  
-Count=1
-for ((i=Count; i<2; i+=1)); do
-genename=$(basename $gene_multifasta | cut -d '_' -f2,3,4,5 | cut -d '.' -f1,2).${i}
-gff=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3
-if grep -q "$genename" "$gff"; then
-OutDir=$(echo $gene_multifasta | cut -d '/' -f1,2,3,4,5,6,7,8,9,10,11,12,13,14)/homo_CDS_fastas
-OutFile=hom_$(echo $genename)_CDS.fa
-echo ${OutDir}/${OutFile} >> logs/hom_splice_CDS.txt
-ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-Jobs=$(squeue -u did23faz| grep 'create_m'  | wc -l)
-echo x
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas
+for gene_multifasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas -name "hom_MYZPE13164_O_EIv2.1_*0213490.fa" -exec readlink -f {} \;); do  
+Jobs=$(squeue -u did23faz| grep 'create_m' | wc -l)
 while [ $Jobs -gt 19 ]; do
 sleep 60s
 printf "."
-Jobs=$(squeue -u did23faz| grep 'create_m'  | wc -l)
+Jobs=$(squeue -u did23faz| grep 'create_m' | wc -l)
 done
-mkdir $OutDir
-sbatch $ProgDir/run_splice_CDS.sh $gene_multifasta $gff $genename $OutDir $OutFile 2>&1 >> logs/hom_splice_CDS.txt
-fi
+gff=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3
+Count=1
+geneID=$(echo $gene_multifasta | rev | cut -d '_' -f1 | rev | cut -d '.' -f1)  
+limit=$(grep "$geneID" $gff | grep 'mRNA' | wc -l)
+for ((i=Count; i<$((limit + 1)); i+=1)); do
+variant=$(basename $gene_multifasta | cut -d '_' -f2,3,4,5 | cut -d '.' -f1,2).${i}
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas
+OutFile=hom_$(echo $variant)_CDS.fa 
+echo ${OutDir}/${OutFile} >> logs/hom_splice_CDS.txt
+echo $OutFile  
+ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI 
+sbatch $ProgDir/run_splice_CDS.sh $gene_multifasta $gff $variant $OutDir $OutFile 2>&1 >> logs/hom_splice_CDS.txt
 done
 done 
+
+#CHECK HAS WORKED AS INTENDED
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_CDS_fastas -name "hom*.fa" -exec readlink -f {} \;); do
+    echo $file
+    grep '>' $file | wc -l
+done #All samples present
+
+awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0213490.1_CDS.fa #same lengths and multiple of 3
+awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0213490.2_CDS.fa #same lengths and multiple of 3
 ```
 For heterozygous mutations:
 ```bash
-for gene_multifasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hetero_gene_fastas -name "het_MYZPE13164_O_EIv2.1_*.fa" -exec readlink -f {} \;); do  
-Count=1
-for ((i=Count; i<2; i+=1)); do
-genename=$(basename $gene_multifasta | cut -d '_' -f2,3,4,5 | cut -d '.' -f1,2).${i}
-gff=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3
-if grep -q "$genename" "$gff"; then
-OutDir=$(echo $gene_multifasta | cut -d '/' -f1,2,3,4,5,6,7,8,9,10,11,12,13,14)/hetero_CDS_fastas
-OutFile=het_$(echo $genename)_CDS.fa
-echo ${OutDir}/${OutFile} >> logs/het_splice_CDS.txt
-ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-Jobs=$(squeue -u did23faz| grep 'create_m'  | wc -l)
-echo x
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas
+for gene_multifasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas -name "het_MYZPE13164_O_EIv2.1_*0213490.fa" -exec readlink -f {} \;); do  
+Jobs=$(squeue -u did23faz| grep 'create_m' | wc -l)
 while [ $Jobs -gt 19 ]; do
 sleep 60s
 printf "."
-Jobs=$(squeue -u did23faz| grep 'create_m'  | wc -l)
+Jobs=$(squeue -u did23faz| grep 'create_m' | wc -l)
 done
-mkdir $OutDir
-sbatch $ProgDir/run_splice_CDS.sh $gene_multifasta $gff $genename $OutDir $OutFile 2>&1 >> logs/het_splice_CDS.txt
-fi
+gff=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3
+Count=1
+geneID=$(echo $gene_multifasta | rev | cut -d '_' -f1 | rev | cut -d '.' -f1)  
+limit=$(grep "$geneID" $gff | grep 'mRNA' | wc -l)
+for ((i=Count; i<$((limit + 1)); i+=1)); do
+variant=$(basename $gene_multifasta | cut -d '_' -f2,3,4,5 | cut -d '.' -f1,2).${i}
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas
+OutFile=het_$(echo $variant)_CDS.fa 
+echo ${OutDir}/${OutFile} >> logs/het_splice_CDS.txt
+echo $OutFile  
+ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI 
+sbatch $ProgDir/run_splice_CDS.sh $gene_multifasta $gff $variant $OutDir $OutFile 2>&1 >> logs/het_splice_CDS.txt
 done
-done
+done 
 ```
 #### Create mutant genomes
 For homozygous mutant mutations:

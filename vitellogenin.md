@@ -88,32 +88,39 @@ Based upon these blast hits MYZPE13164_O_EIv2.1_0213490 is most likely the M.per
 
 NOTE: there are two versions of this gene predicted: MYZPE13164_O_EIv2.1_0213490.1 and MYZPE13164_O_EIv2.1_0213490.2; version 1 is 1,328 amino acids in length, version 2 is 1,203 amino acids in length. 
 ```bash
-#Reference protein sequence:
-grep -A 1 'MYZPE13164_O_EIv2.1_0213490.1' > vitellogenin_1.aa.fa
-grep -A 1 'MYZPE13164_O_EIv2.1_0213490.2' > vitellogenin_2.aa.fa
+#Convert nucleotide fasta to single line format:
+awk ' {if (NR==1) {print $0} else {if ($0 ~ /^>/) {print "\n"$0} else {printf $0}}}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.gene.fa > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.gene.fa #21,011 nucleotides in length; blasts to uncharacterised  Myzus persicae and Acyrthosiphon pisum proteins and 'vitellogenin like' proteins in Melanaphis sacchari and Diuraphis noxia, etc.
+awk ' {if (NR==1) {print $0} else {if ($0 ~ /^>/) {print "\n"$0} else {printf $0}}}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.CDS.fa > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa
 
 #Reference gene sequence:
-grep -A 1 'MYZPE13164_O_EIv2.1_0213490' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.fa > vitellogenin.nt.fa #21,011 nucleotides in length; blasts to uncharacterised  Myzus persicae and Acyrthosiphon pisum proteins and 'vitellogenin like' proteins in Melanaphis sacchari and Diuraphis noxia, etc.
+grep -A 1 'MYZPE13164_O_EIv2.1_0213490' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.gene.fa > MYZPE13164_O_EIv2.1_0213490.fa
 #ReferenceCDS sequence:
+grep -A 1 'MYZPE13164_O_EIv2.1_0213490.1' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa > MYZPE13164_O_EIv2.1_0213490.1.fa
+grep -A 1 'MYZPE13164_O_EIv2.1_0213490.2' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa > MYZPE13164_O_EIv2.1_0213490.2.fa
 
 #Gene sequence multifasta for 193 individuals:
-ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/homo_gene_fastas/hom_MYZPE13164_O_EIv2.1_0213490.fa
-ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hetero_gene_fastas/het_MYZPE13164_O_EIv2.1_0213490.fa
-#CDS sequence multifasta for 192 individuals:
-ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/homo_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0213490.1_CDS.fa
-ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hetero_CDS_fastas/het_MYZPE13164_O_EIv2.1_0213490.1_CDS.fa
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0213490.fa
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas/het_MYZPE13164_O_EIv2.1_0213490.fa
+#CDS sequence multifasta for 193 individuals:
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0213490.1_CDS.fa
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0213490.2_CDS.fa
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_MYZPE13164_O_EIv2.1_0213490.1_CDS.fa
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_MYZPE13164_O_EIv2.1_0213490.2_CDS.fa
 #VCF SNP file, gene region, for 193 individuals:
 ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/dedup_MYZPE13164_O_EIv2.1_0213490_snps.vcf
 #VCF SNP file, CDS region, for 193 individuals:
 ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/dedup_MYZPE13164_O_EIv2.1_CDS_0213490.1_snps.vcf
 ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/dedup_MYZPE13164_O_EIv2.1_CDS_0213490.2_snps.vcf
 
+#Convert amino acid fasta to single line format:
+#Reference protein sequence:
+awk ' {if (NR==1) {print $0} else {if ($0 ~ /^>/) {print "\n"$0} else {printf $0}}}' /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.aa.fa > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.aa.fa
+grep -A 1 'MYZPE13164_O_EIv2.1_0213490.1' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.aa.fa > vitellogenin_1.aa.fa
+grep -A 1 'MYZPE13164_O_EIv2.1_0213490.2' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.aa.fa > vitellogenin_2.aa.fa
 
-#Convert fasta to single line format:
-awk ' {if (NR==1) {print $0} else {if ($0 ~ /^>/) {print "\n"$0} else {printf $0}}}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.gene.fa > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.gene.fa
-awk ' {if (NR==1) {print $0} else {if ($0 ~ /^>/) {print "\n"$0} else {printf $0}}}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.CDS.fa > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa
-
-grep -A 1 'MYZPE13164_O_EIv2.1_0213490' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.gene.fa > MYZPE13164_O_EIv2.1_0213490.fa
-grep -A 1 'MYZPE13164_O_EIv2.1_0213490.1' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa > MYZPE13164_O_EIv2.1_0213490.1.fa
-grep -A 1 'MYZPE13164_O_EIv2.1_0213490.2' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa > MYZPE13164_O_EIv2.1_0213490.2.fa
+source package /nbi/software/production/bin/emboss-6.5.7
+transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0213490.1_CDS.fa -outseq hom_MYZPE13164_O_EIv2.1_0213490.1_CDS.aa.fa -frame 1
+transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0213490.2_CDS.fa -outseq hom_MYZPE13164_O_EIv2.1_0213490.2_CDS.aa.fa -frame 1
+transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_MYZPE13164_O_EIv2.1_0213490.1_CDS.fa -outseq het_MYZPE13164_O_EIv2.1_0213490.1_CDS.aa.fa -frame 1
+transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_MYZPE13164_O_EIv2.1_0213490.2_CDS.fa -outseq het_MYZPE13164_O_EIv2.1_0213490.2_CDS.aa.fa -frame 1
 ```

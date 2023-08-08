@@ -1350,11 +1350,20 @@ admixture --cv /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_cal
 
 for bedfile in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink/193s.M_persicae.onlySNPs_sorted_pruned_set.bed); do
 OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/admixture
-Mink=1
+Mink=2
 Maxk=40
 ProgDir=~/git_repos/Wrappers/NBI
 sbatch $ProgDir/run_admixture_cross_validation.sh $bedfile $Mink $Maxk $OutDir
-done #56002475
+done #56002475, 56144348 from 12 up
+
+for K in 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40; do 
+bedfile=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink/193s.M_persicae.onlySNPs_sorted_pruned_set.bed
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/admixture2
+ProgDir=~/git_repos/Wrappers/NBI
+sbatch $ProgDir/run_admixture_cross_validation.sh $bedfile $K $OutDir
+done #56178239-56178277
+
+source package /tgac/software/testing/bin/admixture-1.3.0
 
 Pruned_vcf=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink/193s.M_persicae.onlySNPs_sorted_pruned_set
 OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/admixture

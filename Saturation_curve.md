@@ -1406,7 +1406,7 @@ rm temp.vcf
 #Remove SNPs without variant:
 source package /nbi/software/testing/bin/vcftools-0.1.15
 vcftools --gzvcf snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.vcf.gz --mac 1 --recode --recode-INFO-all --out snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.mac1.vcf
-#After filtering, kept 7,873,274 out of a possible 11,870,914 Sites = 1/3 removed - presumably most from from lugustri
+#After filtering, kept 7,873,274 out of a possible 11,870,914 Sites = 1/3 removed - this file contains both ligustri and those high missingness samples that we remove later, I dont understand how there are ~4 million snps with no minor alleles present in this file
 
 vcftools --gzvcf snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.mac1.vcf --mac 1 --remove-filtered-all --recode --recode-INFO-all --out snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.mac1.removefiltered.vcf
 
@@ -1823,10 +1823,10 @@ for ReadDir in $(ls -d  /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/
     if [ ! -e temp_cov/*genome_results.txt ]; then
     echo Running for:
     ls ${ReadDir}/qualimap/*genome_results.txt
-    Fread=$(ls $ReadDir/*_1*fq.gz)
-    Rread=$(ls $ReadDir/*_2*fq.gz)
-    Fread2=$(ls $ReadDir/*_3*fq.gz)
-    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    Fread=$(ls $ReadDir/*_1*subsampled2.fq.gz)
+    Rread=$(ls $ReadDir/*_2*subsampled2.fq.gz)
+    Fread2=$(ls $ReadDir/*_3*subsampled2.fq.gz)
+    Rread2=$(ls $ReadDir/*_4*subsampled2.fq.gz)
     OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_cov
     Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
     ProgDir=~/git_repos/Wrappers/NBI
@@ -1843,6 +1843,130 @@ for ReadDir in $(ls -d  /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/
     echo Already Done:
     ls ${ReadDir}/qualimap/*genome_results.txt
     fi
+done
+
+for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_cov/qualimap/*_subsampled_genome_results.txt); do
+name=$(echo $file | rev | cut -d '/' -f1 | rev | cut -d '_' -f1)
+echo $name
+coverage=$(grep 'mean coverageData' $file | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
+echo $coverage
+done
+
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore
+
+Mp_4106a
+29.4021
+
+NIC_410G
+14.847
+
+NIC_410R
+14.9603
+
+SUS_NS
+28.7203
+
+SUS_4225A
+14.8582
+
+SUS_1X
+14.1104
+
+SUS_4106a
+14.7635
+
+source package /tgac/software/testing/bin/seqkit-0.10.0
+for ReadDir in $(ls -d /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/M_persicae/SUS_NS); do
+sample=$(echo $ReadDir | rev | cut -d '/' -f1 | rev)
+coverage=28.7203
+target_coverage=15
+subsampling_ratio=$(bc <<< "scale=2; $target_coverage / $coverage")
+for reads in $(ls $ReadDir/*subsampled.fq.gz); do
+OutFile=$(basename $reads | cut -d '.' -f1)_subsampled2.fq.gz
+OutDir=${ReadDir}
+mkdir $OutDir
+echo subsampling again for problem sample SUS_NS $sample raw reads have average coverage of ${coverage}, these were subsampled with ratio $subsampling_ratio >> Reports/Subsampling_report.txt
+seqkit sample -s 1234 -p $subsampling_ratio -o ${OutDir}/${OutFile} $reads
+done
+done
+
+for ReadDir in $(ls -d /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/M_persicae/4106a); do
+sample=$(echo $ReadDir | rev | cut -d '/' -f1 | rev)
+coverage=29.4021
+target_coverage=15
+subsampling_ratio=$(bc <<< "scale=2; $target_coverage / $coverage")
+for reads in $(ls $ReadDir/*subsampled.fq.gz); do
+OutFile=$(basename $reads | cut -d '.' -f1)_subsampled2.fq.gz
+OutDir=${ReadDir}
+mkdir $OutDir
+echo subsampling again for problem sample 4106a $sample raw reads have average coverage of ${coverage}, these were subsampled with ratio $subsampling_ratio >> Reports/Subsampling_report.txt
+seqkit sample -s 1234 -p $subsampling_ratio -o ${OutDir}/${OutFile} $reads
+done
+done
+
+for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_cov/qualimap/*_subsampled2_genome_results.txt); do
+name=$(echo $file | rev | cut -d '/' -f1 | rev | cut -d '_' -f1)
+echo $name
+coverage=$(grep 'mean coverageData' $file | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
+echo $coverage
+done
+
+Mp_4106a
+15.0044
+
+SUS_NS
+14.9371
+
+for ReadDir in $(ls -d /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/M_persicae/SUS_4106a); do
+    sample=$(echo $ReadDir | rev | cut -d '/' -f1 | rev)
+    Fread=$(ls $ReadDir/*_1*fq.gz)
+    Rread=$(ls $ReadDir/*_2*fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/singh/${sample}/subsampled/trim_galore_2
+    OutFile=${sample}_subsampled_trimmed
+    Quality=20
+    Length=50
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'trim_g'  | wc -l)
+    mkdir $OutDir
+    echo $sample >> logs/trim_galore_report.txt
+    sbatch $ProgDir/run_trim_galore.sh $OutDir $OutFile $Quality $Length $Fread $Rread $Fread2 $Rread2  2>&1 >> logs/trim_galore_report.txt
+done 
+
+ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore
+
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/singh/*/subsampled/trim_galore_2); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1.fq.gz)
+    Rread=$(ls $ReadDir/*_2.fq.gz)
+    Fread2=$(ls $ReadDir/*_3.fq.gz)
+    Rread2=$(ls $ReadDir/*_4.fq.gz)
+    OutDir=$(echo $ReadDir)
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    done
+    echo $ReadDir >> logs/raw_qualimap_report.txt
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done
+
+for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/singh/*/subsampled/trim_galore/qualimap/*_results.txt); do
+name=$(echo $file | rev | cut -d '/' -f1 | rev | cut -d '_' -f1)
+echo $name
+coverage=$(grep 'mean coverageData' $file | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
+echo $coverage
 done
 
 ################################
@@ -1947,13 +2071,100 @@ echo Outputs not detected
 fi
 
 #Symlink files to the main Aphididae directory
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*_2/subsampled); do
     sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
     Dir=/jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}
     OutDir=$(echo $ReadDir | sed 's@raw_data@dna_qc@g')/trim_galore
     mkdir -p $OutDir
     ln -s /jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}/* $OutDir/.
 done
+
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*_2/subsampled/trim_galore); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1*fq.gz)
+    Rread=$(ls $ReadDir/*_2*fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=$(echo $ReadDir)
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
+    done
+    echo $ReadDir >> logs/raw_qualimap_report.txt
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done
+
+for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*_2/subsampled/trim_galore/qualimap/*_results.txt); do
+name=$(echo $file | rev | cut -d '/' -f1 | rev | cut -d '_' -f1)
+echo $name
+coverage=$(grep 'mean coverageData' $file | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
+echo $coverage
+done
+
+for ReadDir in $(ls -d /jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/SUS_1X_2); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1*fq.gz)
+    Rread=$(ls $ReadDir/*_2*fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=$(echo $ReadDir)
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread 
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done #56215674
+
+source package /tgac/software/testing/bin/seqkit-0.10.0
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/singh/SUS_1X_2/subsampled/trim_galore); do
+sample=$(echo $ReadDir | rev | cut -d '/' -f3 | rev)
+coverage=$(grep 'mean coverageData' $ReadDir/qualimap/*genome_results.txt | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
+if (( $(echo "$coverage < 15" | bc -l) )); then
+    echo $sample has low coverage: $coverage >> Reports/Low_coverage_report2.txt
+fi
+target_coverage=15
+subsampling_ratio=$(bc <<< "scale=2; $target_coverage / $coverage")
+for reads in $(ls $ReadDir/*.fq.gz); do
+OutFile=$(basename $reads | cut -d '.' -f1)_subsampled_again.fq.gz
+OutDir=${ReadDir}
+mkdir $OutDir
+echo $sample raw reads have average coverage of ${coverage}, these were subsampled with ratio $subsampling_ratio >> Reports/Subsampling_report.txt
+seqkit sample -s 1234 -p $subsampling_ratio -o ${OutDir}/${OutFile} $reads
+done
+done
+
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/singh/SUS_1X_2/subsampled/trim_galore); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1*again.fq.gz)
+    Rread=$(ls $ReadDir/*_2*again.fq.gz)
+    Fread2=$(ls $ReadDir/*_3*fq.gz)
+    Rread2=$(ls $ReadDir/*_4*fq.gz)
+    OutDir=$(echo $ReadDir)/2
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread 
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done #56215836
 ################################
 
 
