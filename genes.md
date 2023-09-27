@@ -1361,18 +1361,35 @@ bedfile=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/My
 OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/admixture2
 ProgDir=~/git_repos/Wrappers/NBI
 sbatch $ProgDir/run_admixture_cross_validation.sh $bedfile $K $OutDir
-done #56178239-56178277
+done #56178239-56178277, 56258997-56259019, 56359254-56359276, 56607044 (38), 56607045 (39), 56607048 (40), 56607073-6 (27 28 29 30)
 
-source package /tgac/software/testing/bin/admixture-1.3.0
+for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/admixture2/log*); do
+CV=$(grep 'CV error' $file | sed 's@CV error (@@g'| sed 's@):@@g')
+echo $CV
+done
 
 Pruned_vcf=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink/193s.M_persicae.onlySNPs_sorted_pruned_set
 OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/admixture
 OutFile=193s.M_persicae.genomicSNPs
-Mink=8
-Maxk=8
+Mink=21
+Maxk=21
 Bootstraps=200
 ProgDir=~/git_repos/Wrappers/NBI
-sbatch $ProgDir/run_admixture.sh $OutDir $OutFile $Pruned_vcf $Mink $Maxk $Bootstraps #55755934, 56002177
+sbatch $ProgDir/run_admixture.sh $OutDir $OutFile $Pruned_vcf $Mink $Maxk $Bootstraps #57059549
+
+```
+#### STRUCTURE
+```bash
+# Extract individual IDs and genotype data
+source package /nbi/software/testing/bin/vcftools-0.1.15
+vcftools --vcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink/193s.M_persicae.onlySNPs.vcf --plink --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/structure/193s.M_persicae
+
+
+# Convert PLINK files to STRUCTURE format
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/structure
+source package /nbi/software/testing/bin/plink-1.9 
+plink --file /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/structure/193s.M_persicae --recode structure --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/structure/193s.M_persicae
+
 ```
 #### FST
 ```bash
@@ -1449,5 +1466,85 @@ Submitted batch job 19555266
 Submitted batch job 19555769
 
 1891 97.3%
+
+```
+DN/DS
+```bash
+source package /nbi/software/testing/bin/clustalw-2.1
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/dnds.py /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/effector_candidates/het_MYZPE13164_O_EIv2.1_0295860.1_CDS+.fa
+
+import sys
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+from Bio.Align import MultipleSeqAlignment
+from Bio.Align.Applications import ClustalwCommandline
+from Bio.Align.AlignInfo import SummaryInfo
+
+def calculate_dnds_ratio(dn, ds):
+    if dn != 0:
+        return ds / dn
+    else:
+        return float("inf")
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python script.py multifasta.fasta")
+        sys.exit(1)
+    multifasta = sys.argv[1]
+    # Perform multiple sequence alignment
+    clustalw_cline = ClustalwCommandline("clustalw-2.1", infile="/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/effector_candidates/het_MYZPE13164_O_EIv2.1_0295860.1_CDS+.fa")
+    clustalw_cline()
+    alignment = AlignIO.read("temp.aln", "clustal")
+    # Calculate dN and dS values for the whole alignment
+    summary = SummaryInfo(alignment)
+    dn = summary.difference_matrix(["A", "C", "G", "T"], output="ignore_missing")
+    ds = summary.codon_usage_table().synonymous_matrix(["A", "C", "G", "T"])
+    total_dn = sum(dn.values())
+    total_ds = sum(ds.values())
+    dnds_ratio = calculate_dnds_ratio(total_dn, total_ds)
+    print(f"Total dN: {total_dn}, Total dS: {total_ds}, Overall dN/dS ratio: {dnds_ratio}")
+
+if __name__ == "__main__":
+    main()
+
+#########################################################################################################    
+import sys
+from Bio import SeqIO
+from Bio.Align.Applications import ClustalwCommandline
+from Bio.Align.AlignInfo import SummaryInfo
+
+def calculate_dnds_ratio(dn, ds):
+    if dn != 0:
+        return ds / dn
+    else:
+        return float("inf")
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python script.py multifasta.fasta")
+        sys.exit(1)
+    
+    multifasta = sys.argv[1]
+
+    # Perform multiple sequence alignment
+    clustalw_cline = ClustalwCommandline("clustalw2", infile=multifasta)
+    clustalw_cline()
+
+    alignment = AlignIO.read("temp.aln", "clustal")
+
+    # Calculate dN and dS values for the whole alignment
+    summary = SummaryInfo(alignment)
+    dn = summary.difference_matrix(["A", "C", "G", "T"], output="ignore_missing")
+    ds = summary.codon_usage_table().synonymous_matrix(["A", "C", "G", "T"])
+
+    total_dn = sum(dn.values())
+    total_ds = sum(ds.values())
+
+    dnds_ratio = calculate_dnds_ratio(total_dn, total_ds)
+
+    print(f"Total dN: {total_dn}, Total dS: {total_ds}, Overall dN/dS ratio: {dnds_ratio}")
+
+if __name__ == "__main__":
+    main()
 
 ```

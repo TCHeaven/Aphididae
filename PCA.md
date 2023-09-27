@@ -6,10 +6,11 @@ library(rgl)
 library(gridExtra)
 library(htmltools)
 library(plotly)
-
+setwd("C:/Users/did23faz/OneDrive - Norwich Bioscience Institutes/Desktop/R")
 # Load the dissimilarity index CSV file
 dist_matrix <- as.matrix(read.csv("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_193_mperc.csv", row.names = 1))
 dist_matrix <- as.matrix(read.csv("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_193_genic.csv", row.names = 1))
+dist_matrix <- as.matrix(read.csv("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_193CDS.csv", row.names = 1))
 
 # Verify the class and structure of the matrix
 class(dist_matrix)
@@ -107,6 +108,9 @@ rgl::rglwidget()
 
 ```
 With python:
+```bash
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/plotly.sif python3
+```
 ```python
 from sklearn.manifold import MDS
 import pandas as pd
@@ -118,6 +122,7 @@ import plotly.graph_objects as go
 
 #Collect input
 df = pd.read_csv('snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_193_mperc.csv', index_col=0)
+df = pd.read_csv('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_193CDS.csv', index_col=0)
 acc =  df.index.tolist()
 
 #MDS projection dimensionality
@@ -161,7 +166,7 @@ sampler = {}
 geography = {}
 host = {}
 head = ['#', 'sample.id', 'EV1', 'EV2', 'EV3', 'EV4', 'host', 'Collection', 'Country', 'Continent', 'simple_host', 'Collected_by', 'dummy']
-with open('snp_calling/Myzus/persicae/biello/PCA_file_host.csv') as inp:
+with open('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/PCA_file_host.csv') as inp:
   next(inp)
   for line in inp:
       A =  line.strip().split(',')

@@ -196,5 +196,5 @@ Max_intron=10000
 Genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
 ProgDir=~/git_repos/Wrappers/NBI
 sbatch $ProgDir/run_trinity.sh $OutDir $OutFile $Freads_list $Rreads_list $SSFreads_list $SSRreads_list $Max_intron $Genome
-done #56149358, 56149444, 56150138
+done #56265401 - run with de novo hashed out and workdir left
 ```
