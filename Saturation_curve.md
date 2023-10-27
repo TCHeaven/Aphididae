@@ -239,6 +239,96 @@ for scaffold in [f'scaffold_{i}' for i in range(1, 7)]:
         plt.savefig(output_image)
         plt.close()
 ```
+Number of SNPs in sliding windows omitting windows with poor mappability
+```bash
+#Mappability masking is looking at individual nucleotides
+WD=/jic/scratch/groups/Saskia-Hogenhout/roberto/m_persicae/popgen/VCF_filtering/mappability
+
+cd $WD
+
+bedtools intersect -a 212ind.M_persicae.bed -b Myzus_persicae_O.v2.gem.150_004.filt.tab.bed > Myzus_persicae_O.v2.mappable.bed
+
+bedtools subtract -a Myzus_persicae_O.v2.mappable.bed -b Myzus_persicae_O.v2.masked.filt.tab.out.bed > Myzus_persicae_O.v2.callable.bed
+
+#212ind.M_persicae.bed - bed file with all sites in vcf
+#Myzus_persicae_O.v2.gem.150_004.filt.tab.bed - sites that have been mapped
+#Myzus_persicae_O.v2.masked.filt.tab.out.bed intervals to subtract - poor mappability
+#Myzus_persicae_O.v2.callable.bed - sites that have good mappability and can be kept
+
+cp /jic/scratch/groups/Saskia-Hogenhout/roberto/m_persicae/popgen/VCF_filtering/mappability/Myzus_persicae_O.v2.masked.filt.tab.out.bed /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/.
+```
+Total length of poor mapping regions in Myzus_persicae_O.v2.masked.filt.tab.out.bed is 93,097,267 bp
+```python
+import pysam
+import matplotlib.pyplot as plt
+
+# Define the window size
+window_size = 100000
+
+# Specify the output image file template
+output_image_template = '/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_100000_<5_scaffold_{}_plot.png'
+
+# Read the BED file containing regions to be excluded
+exclude_regions = []
+with open('/jic/scratch/groups/Saskia-Hogenhout/roberto/m_persicae/popgen/VCF_filtering/mappability/Myzus_persicae_O.v2.masked.filt.tab.out.bed', 'r') as bed_file:
+    for line in bed_file:
+        fields = line.strip().split('\t')
+        chrom, start, end = fields[0], int(fields[1]), int(fields[2])
+        exclude_regions.append((chrom, start, end))
+
+# Initialize a dictionary to store SNP counts for each scaffold
+scaffold_snp_counts = {}
+
+# Open the VCF file
+with pysam.VariantFile('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf') as vcf_file:
+    for record in vcf_file:
+        scaffold = record.chrom  # Get the scaffold name
+        pos = record.pos  # Get the position of the SNP
+        # Check if the scaffold is in the range 1 to 6
+        if scaffold.startswith('scaffold') and int(scaffold.split('_')[1]) in range(1, 7):
+            if scaffold not in scaffold_snp_counts:
+                scaffold_snp_counts[scaffold] = []
+            # Calculate the window index for the current SNP
+            window_index = pos // window_size
+            if window_index >= len(scaffold_snp_counts[scaffold]):
+                scaffold_snp_counts[scaffold].extend([0] * (window_index - len(scaffold_snp_counts[scaffold]) + 1))
+            # Increment the SNP count for the corresponding window
+            scaffold_snp_counts[scaffold][window_index] += 1
+
+# Function to check if a window overlaps with excluded regions with more than 10% overlap
+def is_overlapping_with_exclude_regions(start, end, regions, overlap_threshold=0.05):
+    window_size = end - start
+    for _, region_start, region_end in regions:
+        overlap = max(0, min(end, region_end) - max(start, region_start))
+        overlap_percentage = overlap / window_size
+        if overlap_percentage > overlap_threshold:
+            return True
+    return False
+
+# Plot SNP counts in sliding windows for each scaffold and save the plots
+for scaffold in [f'scaffold_{i}' for i in range(1, 7)]:
+    if scaffold in scaffold_snp_counts:
+        snp_counts = scaffold_snp_counts[scaffold]
+        window_positions = [i * window_size for i in range(len(snp_counts))]
+        # Filter out windows overlapping with excluded regions
+        filtered_window_positions = []
+        filtered_snp_counts = []
+        for i, start in enumerate(window_positions):
+            end = start + window_size
+            if not is_overlapping_with_exclude_regions(start, end, exclude_regions):
+                filtered_window_positions.append(start)
+                filtered_snp_counts.append(snp_counts[i])     
+        plt.figure(figsize=(20, 5))
+        plt.plot(filtered_window_positions, filtered_snp_counts, marker='.', linestyle='', markersize=4)
+        plt.xlabel('Window Position (bp)')
+        plt.ylabel('Number of SNPs')
+        plt.title(f'Scaffold {scaffold} <5% overlap with poor mapping regions')
+        plt.grid(True)
+        # Save the plot as an image file
+        output_image = output_image_template.format(scaffold.split('_')[1])
+        plt.savefig(output_image)
+        plt.close()
+```
 
 ## Extract genic SNPs
 ```bash
@@ -1017,6 +1107,77 @@ MYZPE13164_O_EIv2.1_0037650
 MYZPE13164_O_EIv2.1_0000020,1,1933
 MYZPE13164_O_EIv2.1_0000050,5,3364
 MYZPE13164_O_EIv2.1_0000070,1,853
+```
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Read the main CSV file into a pandas DataFrame
+data = pd.read_csv('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report2.txt', header=None, names=['ID', 'SNPs', 'Length'])
+
+# Read the subset file into a pandas DataFrame
+subset_data = pd.read_csv('/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/effector_candidates.txt', header=None, names=['ID'])
+
+# Filter the main data based on the subset of IDs
+subset_filtered_data = data[data['ID'].isin(subset_data['ID'])]
+
+# Define the bins for histogram
+bins = [0, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56, 61, 66, 71, 76, 81, 86, 91, 96, 101, float('inf')]
+
+# Group data based on bins and count rows in each group for both filtered and original data
+grouped_data = data.groupby(pd.cut(data['SNPs'], bins=bins)).size()
+subset_grouped_data = subset_filtered_data.groupby(pd.cut(subset_filtered_data['SNPs'], bins=bins)).size()
+
+# Plotting the histogram for both original and filtered data
+plt.figure(figsize=(10, 6))
+plt.bar(range(len(grouped_data)), grouped_data, color='skyblue', edgecolor='black', label='All genes with non-synonymous SNPs')
+plt.bar(range(len(subset_grouped_data)), subset_grouped_data, color='orange', edgecolor='black', label='Candidate effector genes with non-synonymous SNPs')
+plt.title('Number of Non-synonymous SNPs per gene')
+plt.xlabel('Number of SNPs')
+plt.ylabel('Number of genes')
+plt.yscale('log')
+plt.xticks(range(len(grouped_data)), [f'{x.left}-{x.right - 1}' if x.right != float('inf') else f'>{x.left - 1}' for x in grouped_data.index], rotation=45)
+plt.legend()
+plt.savefig('Non-synonymousSNPspergenebarplot.png')
+
+
+############################################################################################
+
+# Calculate the new column values based on the formula: 1 - log10(Value2 / Value3)
+data['Ratio'] = data['Length'] / data['SNPs'] 
+
+# Save the updated DataFrame back to the CSV file
+data.to_csv('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report3.txt', index=False, header=False)
+############################################################################################
+
+# Read the main CSV file into a pandas DataFrame
+data = pd.read_csv('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report3.txt', header=None, names=['ID', 'SNPs', 'Length','Ratio'])
+
+# Read the subset file into a pandas DataFrame
+subset_data = pd.read_csv('/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/effector_candidates.txt', header=None, names=['ID'])
+
+# Filter the main data based on the subset of IDs
+subset_filtered_data = data[data['ID'].isin(subset_data['ID'])]
+
+# Define the bins for histogram
+bins = [0, 101, 201, 301, 401, 501, 601, 701, 801, 901, 1001, 1101, 1201, 1301, 1401, 1501, 1601, 1701, 1801, 1901, 2001, 2101, 2201, 2301, 2401, 2501, 2601, 2701, 2801, 2901, 3001, 4001, 5001, 6001, 7001, 8001, float('inf')]
+
+# Group data based on bins and count rows in each group for both filtered and original data
+grouped_data = data.groupby(pd.cut(data['Ratio'], bins=bins)).size()
+subset_grouped_data = subset_filtered_data.groupby(pd.cut(subset_filtered_data['Ratio'], bins=bins)).size()
+
+# Plotting the histogram for both original and filtered data
+plt.figure(figsize=(10, 6))
+plt.bar(range(len(grouped_data)), grouped_data, color='skyblue', edgecolor='black', label='All genes with non-synonymous SNPs')
+plt.bar(range(len(subset_grouped_data)), subset_grouped_data, color='orange', edgecolor='black', label='Candidate effector genes with non-synonymous SNPs')
+plt.title('Number of Non-synonymous SNPs per gene')
+plt.xlabel('Gene Length / Number of SNPs')
+plt.ylabel('Number of genes')
+plt.yscale('log')
+plt.xticks(range(len(grouped_data)), [f'{x.left}-{x.right - 1}' if x.right != float('inf') else f'>{x.left - 1}' for x in grouped_data.index], rotation=45)
+plt.legend()
+plt.savefig('Non-synonymousSNPspergenebarplot-ratio.png')
 
 ```
 ```python
@@ -1568,6 +1729,20 @@ with open('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling
 #### Whole genome SNPs
 Perform rarefaction analysis:
 ```bash
+for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf);do
+    Reference=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    Replicates=100
+    Steps=193
+    ProgDir=~/git_repos/Wrappers/NBI
+    InFile=$vcf
+    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction
+    OutFile=rarefied-HomozygousALT-SNPS-genomic-mac1-193-100-193
+    mkdir $OutDir
+    sbatch $ProgDir/run_snprarefaction.sh $InFile $OutDir $OutFile $Reference $Replicates $Steps
+done #57151199
+
+#########################################################################################################################
+
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz);do
     Reference=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mperc-analysis-jitender/saskia/reference/Myzus_persicae_O_v2.0.scaffolds.fa.gz
     Replicates=100
@@ -1649,6 +1824,9 @@ done
 head -n 1 $OutDir/${OutFile}-curve.csv 
 
 ########################################################################################################################
+
+bcftools view -v snps /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.vcf.gz | grep -v "^#" | wc -l #126,162
+bcftools view -v snps /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.vcf.gz | grep -v "^#" | grep '1/1:'| wc -l  #28,091
 #True CDS SNPS:
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.vcf.gz);do
     Reference=/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa.gz
@@ -1673,7 +1851,7 @@ from matplotlib import rc
 
 rc('mathtext', default='regular')
 
-df = pd.read_csv("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/rarefied-HomozygousALT-SNPS-genic-193-100-193-curve.csv")
+df = pd.read_csv("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/rarefied-HomozygousALT-SNPS-CDS-193-100-193-curve.csv")
 
 #Column titles from csv = sample_size,rep_polymorphisms_median,rep_polymorphisms_median_fraction
 
@@ -1697,13 +1875,13 @@ ax2.plot(X, Y2, color = 'tab:orange', linestyle='--', marker='o',)
 ax2.tick_params(axis ='y', labelcolor = color) 
 
 # Add a global title to the plot
-suptitle = plt.suptitle('Nuclear genic SNP rarefaction curve with 193 samples using 100 replicates, step size 1', y=1.02)
+suptitle = plt.suptitle('Nuclear CDS SNP rarefaction curve with 193 samples using 100 replicates, step size 1', y=1.02)
 
 plt.tight_layout()
 
 # When you save the fig, add the suptitle text object as an extra artist
-plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/genic-193-100-193-curve.pdf", bbox_extra_artists=(suptitle,), bbox_inches="tight") 
-plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/genic-193-100-193-curve.png", bbox_extra_artists=(suptitle,), bbox_inches="tight") 
+plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/CDS-193-100-193-curve2.pdf", bbox_extra_artists=(suptitle,), bbox_inches="tight") 
+plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/CDS-193-100-193-curve2.png", bbox_extra_artists=(suptitle,), bbox_inches="tight") 
 
 df2 = pd.read_csv("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/rarefied-HomozygousALT-SNPS-genomic-193-100-193-curve.csv")
 X2 = df2['sample_size']
@@ -2383,6 +2561,27 @@ Download Singh data:
 ```bash
 C:\Users\did23faz\Downloads\sratoolkit.current-win64\sratoolkit.3.0.5-win64\bin>prefetch --max-size 1t --option-file C:\Users\did23faz\Documents\accessions.txt --output-directory \\jic-hpc-data\Group-Scratch\Saskia-Hogenhout\tom_heaven\Aphididae\raw_data\Myzus\persicae\singh\download
 ```
+```bash
+cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/singh/download
+nano key.txt #SRR and sample number mapping
+source package /nbi/software/testing/bin/sratoolkit-2.9.0
+
+for dir in $(ls -d *); do
+ID=$(grep $dir key.txt | cut -d $'\t' -f2 | sed 's@S110@NIC_23@g' | sed 's@S111@NIC_410G@g' | sed 's@S106@NIC_5191A@g'| sed 's@S114@NIC_57@g'| sed 's@S115@NIC_8124@g'| sed 's@S112@NIC_926B@g'| sed 's@S105@SUS_4106a@g'| sed 's@S108@SUS_4225A@g'| sed 's@S107@SUS_NS@g'| sed 's@S109@SUS_US1L@g')
+if [ -e ../$ID/qualimap ]; then
+echo $ID
+fastq-dump --split-files --gzip -O ../$ID $dir/*.sra
+else 
+echo $dir
+fi
+done
+
+for file in $(ls ../*/*_1.fastq.gz); do
+echo $file
+SRR=$(echo $file | cut -d '/' -f3 | cut -d '_' -f1)
+rm -r $SRR
+done
+```
 
 ```bash
 for sample in $(cat snp_calling/Myzus/persicae/biello/PCA_file_host.csv | grep -v '#' | cut -d ',' -f2); do
@@ -2474,16 +2673,17 @@ UK37 doesnt exist
 
 du -Lh /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/*.gz | sort -rh | head -n 1
 #21G     /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/wouters/ligustri/M_lig_095_cat_run1_run2_R2_val_2.fq.gz
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*); do
-    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/wouters/*); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results_gff.txt ]; then
     echo Running for:
-    ls ${ReadDir}/qualimap/*genome_results.txt
+    ls ${ReadDir}/qualimap/*genome_results_gff.txt
     Fread=$(ls $ReadDir/*_1.fq.gz)
     Rread=$(ls $ReadDir/*_2.fq.gz)
     Fread2=$(ls $ReadDir/*_3.fq.gz)
     Rread2=$(ls $ReadDir/*_4.fq.gz)
     OutDir=$(echo $ReadDir)
     Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    Gff=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3
     ProgDir=~/git_repos/Wrappers/NBI
     Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
     echo x
@@ -2493,7 +2693,7 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
         Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
     done
     echo $ReadDir >> logs/raw_qualimap_report.txt
-    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
+    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Gff $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
     else
     echo Already Done:
     ls ${ReadDir}/qualimap/*genome_results.txt
@@ -2974,4 +3174,31 @@ awk -F '\t' '$1 == "scaffold_4" && $2 >= 8200000 && $2 <= 8250000' /jic/scratch/
 awk -F '\t' '$1 == "scaffold_4" && $2 >= 12550000 && $2 <= 12630000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
 awk -F '\t' '$1 == "scaffold_4" && $2 >= 47700000 && $2 <= 47850000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
 awk -F '\t' '$1 == "scaffold_134"' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
+```
+```bash
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*); do
+    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
+    echo Running for:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    Fread=$(ls $ReadDir/*_1.fq.gz)
+    Rread=$(ls $ReadDir/*_2.fq.gz)
+    Fread2=$(ls $ReadDir/*_3.fq.gz)
+    Rread2=$(ls $ReadDir/*_4.fq.gz)
+    OutDir=$(echo $ReadDir)
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    ProgDir=~/git_repos/Wrappers/NBI
+    Jobs=$(squeue -u did23faz| grep 'bwa'  | wc -l)
+    echo x
+    while [ $Jobs -gt 19 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'bwa'  | wc -l)
+    done
+    echo $ReadDir >> logs/raw_bwamem_report.txt
+    sbatch $ProgDir/run_bwa-mem.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_bwamem_report.txt
+    else
+    echo Already Done:
+    ls ${ReadDir}/qualimap/*genome_results.txt
+    fi
+done
 ```
