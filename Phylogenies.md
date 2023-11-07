@@ -679,6 +679,32 @@ for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_c
 rm -r /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/RAxML/$file
 done
 ```
+#### PAML - Omega DN/DS
+```bash
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files.txt
+Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
+for Seqfile in $(cat temp_files.txt); do
+echo x
+while [ $Jobs -gt 123 ]; do
+    sleep 300s
+    printf "."
+    Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
+done
+TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
+ls $TreeFile
+OutDir=$(dirname $TreeFile)/paml
+OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out
+ProgDir=~/git_repos/Wrappers/NBI
+if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
+mkdir $OutDir
+ls $TreeFile 2>&1 >> logs/pamllog.txt
+sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog.txt
+else
+echo Already run for ${OutFile}
+fi 
+done
+#57339176
+```
 #### Create mutant genomes
 For homozygous mutant mutations:
 ```bash
