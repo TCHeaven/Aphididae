@@ -2392,16 +2392,51 @@ done
 ```
 #### Gemma
 ```bash
+perl ~/git_repos/Scripts/NBI/bcf2bbgeno.pl -i /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz -o /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.bbgeno -p H-W -s -r
+cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/
+gzip 193s.M_persicae.onlySNPs-genic-regions.bbgeno
+#57527288
+```
+```bash
 zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz | awk 'BEGIN{OFS="\t"} {if ($3 == ".") $3 = $1"_"$2"_"$5; print}' | gzip > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.vcf.gz
 
 zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.vcf.gz | sed 's/scaffold_//g' | gzip > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.tmp.vcf.gz && mv /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.tmp.vcf.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.vcf.gz
 
-source package /tgac/software/testing/bin/plink-1.90
+##################################################################################################################
+source package 01ef5a53-c149-4c9e-b07d-0b9a46176cc0
+bgzip -c /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf.gz
 
-plink --vcf temp.vcf  --recode --out temp
-plink --allow-extra-chr --file temp --make-bed --out temp
+zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf.gz | awk 'BEGIN{OFS="\t"} {if ($3 == ".") $3 = $1"_"$2"_"$5; print}' | bgzip -c > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf.gz
+
+#57451298
+
+#there are 360 scaffolds in the assembly, however plink cannot process more than 95 chromosome, therefore will use only the large scaffolds 1-6 for admixture analysis.
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2
+zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf.gz | head -n 5 > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf
+zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf.gz | grep -w '##ALT\|##INFO\|##FORMAT\|#CHROM\|##bcftools_callVersion\|##bcftools_callCommand\|##bcftools_concatVersion\|##bcftools_concatCommand\|##bcftools_filterVersion\|##bcftools_filterCommand\|##bcftools_viewVersion\|##bcftools_viewCommand\|scaffold_1\|scaffold_2\|scaffold_3\|scaffold_4\|scaffold_5\|scaffold_6' | sed 's@scaffold_@chr@g' >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf
+cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/
+bgzip /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf
+#57451608
+
+source package /nbi/software/testing/bin/plink-1.9 
+plink --vcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf.gz --make-bed --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod
+#57452909
+plink --bfile /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod --genome --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod
+#57501018
+
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
 ```
+```python
+import pandas as pd
+import numpy as np
 
+ibd_data = pd.read_csv("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.genome", delim_whitespace=True)
+df = ibd_data[['FID1', 'IID1', 'FID2', 'IID2', 'PI_HAT']]
+kinship_matrix = df.pivot_table(values='PI_HAT', index=['FID1', 'IID1'], columns=['FID2', 'IID2']).values
+kinship_matrix = np.nan_to_num(kinship_matrix)
+kinship_matrix -= np.mean(kinship_matrix)
+np.savetxt("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/kinship_matrix.txt", kinship_matrix, fmt='%.6f', delimiter='\t')
+```
 Graphs were plotted in excel
 #### vcftools plot of saturation curve
 ```bash

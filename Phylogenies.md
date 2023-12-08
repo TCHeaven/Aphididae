@@ -679,23 +679,135 @@ for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_c
 rm -r /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/RAxML/$file
 done
 ```
+Missing:
+```bash
+for Seqfile in $(tac temp_files.txt); do
+    TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
+    if [ ! -e "${TreeFile}" ] || [ ! -s "${TreeFile}" ]; then
+        echo $Seqfile >> temp_missing.txt
+    fi
+done
+
+for x in $(cat temp_missing.txt); do
+    y=$(echo $x | rev | cut -d '/' -f1 | rev | sed 's@.fa@@g')
+    z=$(grep -A 1 "$y" logs/raxml_hom.txt | awk 'NR==2' | cut -d ' ' -f4)
+    sacct -j $z --format=JobID,JobName,ReqMem,MaxRSS,TotalCPU,AllocCPUS,Elapsed,State,ExitCode
+done
+```
 #### PAML - Omega DN/DS
 ```bash
 find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files.txt
+wc -l temp_files.txt #36480
+
+
+function is_valid_time {
+    current_hour=$(date +"%H")
+    day_of_week=$(date +"%u")  # 1 (Monday) through 7 (Sunday)
+    if [ "$day_of_week" -ge 1 ] && [ "$day_of_week" -le 5 ]; then
+        if [ "$current_hour" -ge 18 ] || [ "$current_hour" -lt 4 ]; then
+            return 0  # Valid time on weekdays
+        else
+            return 1  # Invalid time on weekdays
+        fi
+    else
+        return 0  # Valid time on weekends
+    fi
+}
+
+#for Seqfile in $(cat temp_csep_files.txt); do
+
+for Seqfile in $(tac temp_files.txt); do
 Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
-for Seqfile in $(cat temp_files.txt); do
-echo x
-while [ $Jobs -gt 123 ]; do
-    sleep 300s
-    printf "."
-    Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
-done
+echo $Jobs 1
 TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
-ls $TreeFile
+OutDir=$(dirname $TreeFile)/paml
+OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out
+ProgDir=~/git_repos/Wrappers/NBI
+if is_valid_time; then
+    if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
+        while [ $Jobs -gt 199 ]; do
+            sleep 300s
+            printf "."
+            Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+        done
+        ls $TreeFile
+        mkdir $OutDir
+        ls $TreeFile 2>&1 >> logs/pamllog.txt
+        sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog.txt
+    else
+        echo Already run for ${OutFile}
+    fi 
+else
+    if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
+        while [ $Jobs -gt 189 ]; do
+            sleep 300s
+            printf "."
+            Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+        done
+        ls $TreeFile
+        mkdir $OutDir
+        ls $TreeFile 2>&1 >> logs/pamllog.txt
+        sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog.txt
+    else
+        echo Already run for ${OutFile}
+    fi 
+fi
+done
+
+/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0002220*
+MYZPE13164_O_EIv2.1_0037470
+MYZPE13164_O_EIv2.1_0037650
+
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files.txt
+
+for gene in $(cat /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/effector_candidates.txt); do
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_${gene}* >> temp_csep_files.txt
+done
+
+
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_all.txt
+for Seqfile in $(cat temp_files_all.txt); do
+TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
+OutDir=$(dirname $TreeFile)/paml
+OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out 
+if [ -e "${OutDir}/${OutFile}" ] && [ -s "${OutDir}/${OutFile}" ]; then
+    ls ${OutDir}/${OutFile} >> temp_count.txt
+fi
+done
+
+for file in $(cat temp_count.txt); do
+grep 'omega (dN/dS)' $file
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+tail -n 4000 temp_files.txt | tac > temp_temp_files.txt
+for Seqfile in $(cat temp_temp_files.txt); do
+Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
+echo $Jobs 1
+TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
 OutDir=$(dirname $TreeFile)/paml
 OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out
 ProgDir=~/git_repos/Wrappers/NBI
 if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
+while [ $Jobs -gt 189 ]; do
+    sleep 300s
+    printf "."
+    Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+done
+ls $TreeFile
 mkdir $OutDir
 ls $TreeFile 2>&1 >> logs/pamllog.txt
 sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog.txt
@@ -703,7 +815,405 @@ else
 echo Already run for ${OutFile}
 fi 
 done
-#57339176
+
+head -n 1000 temp_temp_files.txt > temp_array.txt
+sbatch $ProgDir/run_paml_omega_array.sh /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_array.txt /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/logs/pamllog.txt
+
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \;); do
+TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
+OutDir=$(dirname $TreeFile)/paml
+OutFile=$(basename $file | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out
+
+done
+
+
+
+
+
+for split in $(split -d temp_files.txt); do
+Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
+while [ $Jobs -gt 190 ]; do
+    sleep 1800s
+    printf "."
+    Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+done
+Log=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/logs/pamllog.txt
+sbatch $ProgDir/run_paml_omega_array.sh $split $Log
+done
+
+for split in $(split -d temp_files.txt); do
+Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
+while [ $Jobs -gt 190 ]; do
+    sleep 1800s
+    printf "."
+    Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+done
+cat $split >> temp_test.txt
+echo _ >> temp_test.txt
+echo _ >> temp_test.txt
+#Log=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/logs/pamllog.txt
+#sbatch $ProgDir/run_paml_omega_array.sh $split $Log
+done
+
+
+#!/bin/bash
+
+TempFile="temp_files.txt"
+BatchSize=1000
+TotalLines=$(wc -l < "$TempFile")
+for ((start = 1; start <= TotalLines; start += BatchSize)); do
+    end=$((start + BatchSize - 1))
+    sed -n "$start,${end}p" "$TempFile" > batch_files.txt
+    while read -r split; do
+        Jobs=$(squeue -u did23faz | grep 'paml' | wc -l)
+        while [ "$Jobs" -gt 189 ]; do
+            sleep 1800s
+            printf "."
+            Jobs=$(squeue -u did23faz | grep 'paml' | wc -l)
+        done
+        Log="/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/logs/pamllog.txt"
+        sbatch "$ProgDir/run_paml_omega_array.sh" "$split" "$Log"
+    done < batch_files.txt
+    rm batch_files.txt
+done
+
+```
+Orthofinder dn/ds
+```bash
+  ProjDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
+  cd $ProjDir
+  IsolateAbrv=persicae_v_ligustri
+  WorkDir=analysis/orthology/orthofinder/$IsolateAbrv
+  mkdir -p $WorkDir
+  mkdir -p $WorkDir/formatted
+  mkdir -p $WorkDir/goodProteins
+  mkdir -p $WorkDir/badProteins  
+
+source package /nbi/software/production/bin/porthomcl-40f497e
+
+Taxon_code=MYZ
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=LIG
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_ligustri/v1.1/Myzus_ligustri_v1.1.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+for WorkDir in $(ls -d analysis/orthology/orthofinder/*); do
+Input_dir=$WorkDir/formatted
+Min_length=10
+Max_percent_stops=20
+Good_proteins_file=$WorkDir/goodProteins/goodProteins.fasta
+Poor_proteins_file=$WorkDir/badProteins/poorProteins.fasta
+orthomclFilterFasta $Input_dir $Min_length $Max_percent_stops $Good_proteins_file $Poor_proteins_file
+done
+
+sbatch ~/git_repos/Wrappers/NBI/run_orthofinder.sh $WorkDir 
+#57518180
+
+OrthogroupsTxt=$WorkDir/formatted/OrthoFinder/*/Orthogroups/Orthogroups.txt
+GoodProts=$WorkDir/goodProteins/goodProteins.fasta
+OutDir=$WorkDir/orthogroups_fasta
+mkdir -p $OutDir
+source package /tgac/software/production/bin/python-2.7.10
+python ~/git_repos/Scripts/NBI/orthoMCLgroups2fasta.py --orthogroups $OrthogroupsTxt --fasta $GoodProts --out_dir $OutDir
+#57527510
+mv slurm.57527510.out $WorkDir/orthoreport.txt
+
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/orthology/orthofinder/persicae_v_ligustri/orthogroups_fasta/paired
+for fasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/orthology/orthofinder/persicae_v_ligustri/orthogroups_fasta -name "orthogroupOG*.fa" -exec readlink -f {} \;); do
+    if grep -q '^>MYZ' "$fasta" && grep -q '^>LIG' "$fasta"; then
+    OutFile=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/orthology/orthofinder/persicae_v_ligustri/orthogroups_fasta/paired/$(basename $fasta | sed 's@.fa@_paired.fa@g')
+    singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/find_longest_myzlig.py $fasta $OutFile
+    fi
+done
+```
+```python
+fasta_file_path = 'analysis/orthology/orthofinder/persicae_v_ligustri/orthogroups_fasta/orthogroupOG0003376.fa'  # Replace 'your_file.txt' with the actual path to your file
+
+import sys
+import os
+
+fasta_file_path = sys.argv[1]
+output_path = sys.argv[2]
+
+def process_fasta(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+    max_length_myz = 0
+    max_sequence_myz = ""
+    max_length_lig = 0
+    max_sequence_lig = ""
+    current_header = ""
+    for line in lines:
+        line = line.strip()
+        if line.startswith('>MYZ') or line.startswith('>LIG'):
+            current_header = line
+        else:
+            sequence_length = len(line)
+            if current_header.startswith('>MYZ') and sequence_length > max_length_myz:
+                max_length_myz = sequence_length
+                max_sequence_myz = line
+                max_header_myz = current_header
+            elif current_header.startswith('>LIG') and sequence_length > max_length_lig:
+                max_length_lig = sequence_length
+                max_sequence_lig = line
+                max_header_lig = current_header
+    with open(output_path, 'w') as output_file:
+        output_file.write(f"{max_header_myz}")
+        output_file.write(f"{max_sequence_myz}")
+        output_file.write(f"{max_header_lig}")
+        output_file.write(f"{max_sequence_lig}")
+
+process_fasta(fasta_file_path)
+```
+Orthofinder dn/ds
+```bash
+  ProjDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
+  cd $ProjDir
+  IsolateAbrv=all_aphid
+  WorkDir=analysis/orthology/orthofinder/$IsolateAbrv
+  mkdir -p $WorkDir
+  mkdir -p $WorkDir/formatted
+  mkdir -p $WorkDir/goodProteins
+  mkdir -p $WorkDir/badProteins  
+
+source package /nbi/software/production/bin/porthomcl-40f497e
+
+Taxon_code=ACYpis
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Acyrthosiphon_pisum/JIC1_v1/Acyrthosiphon_pisum_JIC1_v1.0.scaffolds.braker2.gff.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=APHfab
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Aphis_fabae/JIC1_v2/Aphis_fabae_JIC1_v2.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=APHgly
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Aphis_glycines/biotype_4_v3/Aphis_glycines_4.v3.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=APHgos
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Aphis_gossypii/JIC1_v1/Aphis_gossypii_JIC1_v1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=APHrum
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Aphis_rumicis/v1/Aphis_rumicis_v1.scaffolds.braker_gthr.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=APHtha
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Aphis_thalictri/v1/Aphis_thalictri_v1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=BRAcar
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Brachycaudus_cardui/v1.1/Brachycaudus_cardui_v1.1.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=BRAhel
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Brachycaudus_helichrysi/v1.1/Brachycaudus_helichrysi_v1.1.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=BRAklu
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Brachycaudus_klugkisti/v1.1/Brachycaudus_klugkisti_v1.1.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=BREbra
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Brevicoryne_brassicae/v2/Brevicoryne_brassicae_v2.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=CINced
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Cinara_cedri/v1/cinced3A.pep.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=DAKvit
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Daktulosphaira_vitifoliae/INRAPcf7_v5/Daktulosphaira_vitifoliae_INRAPcf7_v5.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=DIUnox
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Diuraphis_noxia/SAM_v1.1/Diuraphis_noxia_SAM.v1.1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+#Taxon_code=DREpla
+#Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Drepanosiphum_platanoidis/)
+#Id_field=1
+#orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+#mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=ERIlan
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Eriosoma_lanigerum/v1/Eriosoma_lanigerum_v1.0.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=HORcor
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Hormaphis_cornu/v1/Augustus.updated_w_annots.21Aug20.gff3.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=MACalb
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Macrosiphum_albifrons/v1/Macrosiphum_albifrons_v1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=METdir
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Metopolophium_dirhodum/JIC1_v1.1/Metopolophium_dirhodum_UK035_v1.1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=MYZcer
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_cerasi/Thorpe_v1.2/Myzus_cerasi_v1.2.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=MYZlig
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_ligustri/v1.1/Myzus_ligustri_v1.1.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=MYZlyt
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_lythri/v1.1/Myzus_lythri_v1.1.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=MYZper
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=MYZvar
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_varians/v1.1/Myzus_varians_v1.1.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+#Taxon_code=PEMphi
+#Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Pemphigus_spyrothecae/)
+#Id_field=1
+#orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+#mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=PENnig
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Pentalonia_nigronervosa/v1/Pentalonia_nigronervosa.v1.scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=PHOcan
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Phorodon_cannabis/v1/Phorodon_cannabis_v1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=PHOhum
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Phorodon_humuli/v2/Phorodon_humuli_v2_scaffolds.braker.filtered.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+#Taxon_code=RHOmai #####this crashes orthofinder for some reason
+#Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Rhopalosiphum_maidis/v1/rmaidis_v2.gff3.prot.fa)
+#Id_field=1
+#orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+#mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=RHOpad
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Rhopalosiphum_padi/JIC1_v1/Rhopalosiphum_padi_JIC1_v1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=SCHchi
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Schlechtendalia_chinensis/v1/proteins.fasta)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=SITave
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Sitobion_avenae/JIC1_v2.1/Sitobion_avenae_JIC1_v2.1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=SITfra
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Sitobion_fragariae/v1/Sitobion_fragariae_v1.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+Taxon_code=SITmis
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Sitobion_miscanthi/v2/Sitobion_miscanthi_v2.scaffolds.braker.aa.fa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+
+
+for Dir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/orthology/orthofinder/$IsolateAbrv); do
+Input_dir=$Dir/formatted
+Min_length=10
+Max_percent_stops=20
+Good_proteins_file=$Dir/goodProteins/goodProteins.fasta
+Poor_proteins_file=$Dir/badProteins/poorProteins.fasta
+orthomclFilterFasta $Input_dir $Min_length $Max_percent_stops $Good_proteins_file $Poor_proteins_file
+done
+
+sbatch ~/git_repos/Wrappers/NBI/run_orthofinder.sh $WorkDir 
+#57528443,57528511
+
+OrthogroupsTxt=$WorkDir/formatted/OrthoFinder/*/Orthogroups/Orthogroups.txt
+GoodProts=$WorkDir/goodProteins/goodProteins.fasta
+OutDir=$WorkDir/orthogroups_fasta
+mkdir -p $OutDir
+source package /tgac/software/production/bin/python-2.7.10
+python ~/git_repos/Scripts/NBI/orthoMCLgroups2fasta.py --orthogroups $OrthogroupsTxt --fasta $GoodProts --out_dir $OutDir 2>&1 | tee -a $WorkDir/orthoreport.txt
+
+mkdir ${WorkDir}/orthogroups_fasta/paired
+for fasta in $(find ${WorkDir}/orthogroups_fasta -name "orthogroupOG*.fa" -exec readlink -f {} \;); do
+    codes=">SITmis,>SITfra,>SITave,>SCHchi,>RHOpad,>RHOmai,>PHOhum,>PHOcan,>PENnig,>MYZvar,>MYZlyt,>MYZlig,>MYZcer,>METdir,>MACalb,>HORcor,>ERIlan,>DIUnox,>DAKvit,>CINced,>BREbra,>BRAklu,>BRAhel,>BRAcar,>APHtha,>APHrum,>APHgos,>APHgly,>APHfab,>ACYpis"
+    count=$(grep -E "^($(echo $codes | tr ',' '|'))" "$fasta" | wc -l)
+    if grep -q '^>MYZ' "$fasta" && [ "$count" -ge 10 ]; then
+    OutFile=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/orthology/orthofinder/persicae_v_ligustri/orthogroups_fasta/paired/$(basename $fasta | sed 's@.fa@_paired.fa@g')
+    singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/find_longest_myzlig.py $fasta $OutFile
+    fi
+done
+#57528412, 57528547
+
+MLSRLNSKYGLDVILVGNEAIKNARYMGKIKIEMVVTASEFYVYGKYDLDFNNKSDSKYKRQIISTEALT
 ```
 #### Create mutant genomes
 For homozygous mutant mutations:
