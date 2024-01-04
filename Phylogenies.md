@@ -716,7 +716,7 @@ function is_valid_time {
 
 #for Seqfile in $(cat temp_csep_files.txt); do
 
-for Seqfile in $(tac temp_files.txt); do
+for Seqfile in $(cat temp_files.txt); do
 Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
 echo $Jobs 1
 TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
@@ -725,7 +725,7 @@ OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out
 ProgDir=~/git_repos/Wrappers/NBI
 if is_valid_time; then
     if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
-        while [ $Jobs -gt 199 ]; do
+        while [ $Jobs -gt 189 ]; do
             sleep 300s
             printf "."
             Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)

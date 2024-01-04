@@ -257,7 +257,7 @@ bedtools subtract -a Myzus_persicae_O.v2.mappable.bed -b Myzus_persicae_O.v2.mas
 
 cp /jic/scratch/groups/Saskia-Hogenhout/roberto/m_persicae/popgen/VCF_filtering/mappability/Myzus_persicae_O.v2.masked.filt.tab.out.bed /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/.
 ```
-Total length of poor mapping regions in Myzus_persicae_O.v2.masked.filt.tab.out.bed is 93,097,267 bp
+Total length of poor mapping regions in Myzus_persicae_O.v2.masked.filt.tab.out.bed is 93,097,267 bp -error? this is the no. of bases masked from repeatmodeler
 ```python
 import pysam
 import matplotlib.pyplot as plt
@@ -2617,6 +2617,7 @@ SRR=$(echo $file | cut -d '/' -f3 | cut -d '_' -f1)
 rm -r $SRR
 done
 ```
+Singh raw data has subsequently been deleted from the HPC save space as it is backed up with NCBI.
 
 ```bash
 for sample in $(cat snp_calling/Myzus/persicae/biello/PCA_file_host.csv | grep -v '#' | cut -d ',' -f2); do
@@ -2801,7 +2802,7 @@ name=$(echo $sample | cut -d '/' -f12)
 echo $name $cov
 done
 
-#NOTE: to save space the script has been edited to delete input files upon production of outputs. - in this case this will just remove the symlinks - make sure that you check that it runs correctly first before deleting all input data
+#NOTE: to save space the script has been edited to delete input files upon production of outputs.
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
     sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
     Fread=$(ls $ReadDir/*_1*fq.gz)
@@ -2830,6 +2831,7 @@ echo Outputs detected
 else
 echo Outputs not detected
 fi
+#Subsampled Trimmed read files have been deleted following successful generation of mitochondrial VCF file, can be regenertated from raw data if needed.
 
 #Symlink files to the main Aphididae directory
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
@@ -2961,6 +2963,8 @@ sbatch $ProgDir/temp.sh #56624720, 56626500, 56627364 (haploid calls)
 
 bgzip -cd /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255.M_persicae.mito.vcf.gz | grep -v '#' | wc -l #4,165
 bgzip -cd /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192.M_persicae.mito.vcf.gz | grep -v '#' | wc -l #603
+
+#bam files were subsequently removed to save space
 ```
 Filtering:
 
