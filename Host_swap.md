@@ -1,4 +1,8 @@
+# Three host swap 
+
 ## Collect data
+Data was copied from storage with the Swarbreck group to the Hogenhout scratch space (not backed up as already backed up with Swarbreck group).
+
 All files that look like analysis not raw data have been removed/not copied over in order to save space.
 ```bash
 #Host Swap Data:
@@ -90,7 +94,9 @@ rm -r /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/Archana_hostadap
 ## Check mutations in the aphid genomes over the course of the experiment with WGS
 This is the purpose of the WGS data which was collected at the start and end of each experimental repeat from each host, ie.: generation 1 of aphids exposed to Br in experiments 1 and 2 (E1, E2), the generation 39 of aphids exposed to Br, At, Nb in E1, and the generation 25 of aphids exposed to Br, At, Nb in E2. 
 
-#### QC - fastqc and qualimap
+### QC 
+#### fastqc and qualimap
+Raw reads were assessed for quality and coverage of the clone O_v2 reference assembly:
 ```bash
 for ReadDir in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/WGS/Archana_Feb2021/ -mindepth 1 -type d); do
     if [ ! -e ${ReadDir}/qualimap/*genome_results_gff.txt ]; then
@@ -117,18 +123,20 @@ sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
 coverage=$(grep 'mean coverageData' ${ReadDir}qualimap/*_genome_results_gff.txt | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
 echo $sample raw reads have average coverage of ${coverage}
 done
-
-#BR1_E1 raw reads have average coverage of 23.8422
-#BR39_E1 raw reads have average coverage of 23.2599
-#AT39_E1 raw reads have average coverage of 20.6892
-#NB39_E1 raw reads have average coverage of 21.0765
-
-#BR1_E2 raw reads have average coverage of 20.0134
-#BR25_E2 raw reads have average coverage of 23.7613
-#AT25_E2 raw reads have average coverage of 19.7724
-#NB25_E2 raw reads have average coverage of 21.6007
 ```
-Trim
+BR1_E1 raw reads have average coverage of 23.8422
+BR39_E1 raw reads have average coverage of 23.2599
+AT39_E1 raw reads have average coverage of 20.6892
+NB39_E1 raw reads have average coverage of 21.0765
+
+BR1_E2 raw reads have average coverage of 20.0134
+BR25_E2 raw reads have average coverage of 23.7613
+AT25_E2 raw reads have average coverage of 19.7724
+NB25_E2 raw reads have average coverage of 21.6007
+
+### Trimming
+#### Trim galore
+Adapters and low quality regions were trimmed from raw reads via trim-galore:
 ```bash
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/WGS/Archana_Feb2021/*_E*); do
     sample=$(echo $ReadDir | rev | cut -d '/' -f1 | rev)
@@ -146,7 +154,7 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
 done 
 #57483703-10
 ```
-QC
+Trimmed reads were re-assessed for quality and coverage of the clone O_v2 reference assembly:
 ```bash
 for ReadDir in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/WGS/Archana_Feb2021/ -mindepth 1 -type d); do
     if [ ! -e ${ReadDir}/qualimap/*genome_results_gff.txt ]; then
@@ -173,18 +181,22 @@ sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
 coverage=$(grep 'mean coverageData' ${ReadDir}qualimap/*_genome_results_gff.txt | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
 echo $sample raw reads have average coverage of ${coverage}
 done
-
-#BR1_E1 raw reads have average coverage of 23.7446
-#BR39_E1 raw reads have average coverage of 23.161
-#AT39_E1 raw reads have average coverage of 20.6012
-#NB39_E1 raw reads have average coverage of 20.9847
-
-#BR1_E2 raw reads have average coverage of 19.9298
-#BR25_E2 raw reads have average coverage of 23.6622
-#AT25_E2 raw reads have average coverage of 19.69
-#NB25_E2 raw reads have average coverage of 21.5096
 ```
-Alignment to reference genome is performed as part of run_raw_read_qc.sh with bwa-mem
+BR1_E1 raw reads have average coverage of 23.7446
+BR39_E1 raw reads have average coverage of 23.161
+AT39_E1 raw reads have average coverage of 20.6012
+NB39_E1 raw reads have average coverage of 20.9847
+
+BR1_E2 raw reads have average coverage of 19.9298
+BR25_E2 raw reads have average coverage of 23.6622
+AT25_E2 raw reads have average coverage of 19.69
+NB25_E2 raw reads have average coverage of 21.5096
+
+### Alignment
+
+Alignment to reference genome is performed as part of run_raw_read_qc.sh with bwa-mem (previous step).
+
+#### Picard and GATK
 
 Files were sorted by scaffold and coordinate level, duplicates were marked and removed and the files were re-indexed:
 ```bash
@@ -211,7 +223,8 @@ done
 
 #Input files were subsequently deleted to save space
 ```
-GATK indel realignment:
+
+Reads near detected indels realigned to remove alignment artifacts:
 ```bash
 #The reference genome was indexed and a dictionary created:
 interactive
@@ -224,12 +237,16 @@ java -jar /tgac/software/testing/bin/core/../..//picardtools/2.1.1/x86_64/bin/pi
 samtools faidx Myzus_persicae_O_v2.0.scaffolds.fa
 cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
 
+#GATK indel realignment:
 for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/WGS/Archana_Feb2021/*/trim_galore/bwa-mem/*MarkDups.bam); do
 Reference=/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
 ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
 sbatch $ProgDir/run_realign.sh $file $Reference 
 done #57519857-64
 ```
+
+### Variant calling
+
 Combined into a .vcf and called variants with bcftools:
 ```bash
 source package 638df626-d658-40aa-80e5-14a275b7464b
@@ -240,7 +257,8 @@ bcftools mpileup -b /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/ba
 bcftools call --ploidy 2 -Oz -v -m -o /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/BR_AT_NB_hostswap.vcf.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/BR_AT_NB_hostswaps.vcf.gz
 #57520372
 ```
-Filter for genome mappability:
+### Filter 
+#### Genmap filter for genome mappability
 
 We further refined our input files by calculating mappability of the genome with GenMap (v1.3.0) with the parameters -K 100 -E 2. This estimates k-mer uniqueness and identifies regions of the genome where Illumina reads are unable to map uniquely. We masked all regions larger than 100 bp with less than 1 i.e., max mappability. 10.1038/s41586-021-04269-6 and 10.1038/s41467-023-43383-z use k=100 for 150bp paired reads.
 ```bash
@@ -255,13 +273,13 @@ ProgDir=~/git_repos/Wrappers/NBI
 sbatch $ProgDir/run_genmap_mappability_masking.sh $OutDir $OutFile $Reference $Repeatmodeller $VCF
 #57695712
 
-#Mappable bases (genmap): 328,601,147
-#Masked bases (repeatmodeler): 93,097,267
-#Callable bases (overlap of VCF and mappable genmap regions, minus repeatmodeler masked regions): 2,417,154
-
 zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/genmap/BR_AT_NB_hostswap_callable.vcf.gz | wc -l #644,700
 ```
-Plot genemap mappability to compare with qualimap mappability plots. These are not clear as the mappability regions are generally too dense to distinguish, nonetheless it appears that genmap successfully identifies poor mappability at the start of Chromosome 1.
+Mappable bases (genmap): 328,601,147
+Masked bases (repeatmodeler): 93,097,267
+Callable bases (overlap of VCF and mappable genmap regions, minus repeatmodeler masked regions): 2,417,154
+
+Plot genemap mappability to compare with qualimap mappability plots. These are not clear as the mappability regions are too dense to properly distinguish at whole genome scale, nonetheless it appears that genmap successfully identifies poor mappability at the start of Chromosome 1.
 ```python
 import matplotlib.pyplot as plt
 
@@ -293,7 +311,7 @@ plt.tight_layout()
 
 plt.savefig('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/genmap/genemap_mappability_plot.png')
 ```
-Filter samples for missingness:
+#### Filter samples for missingness:
 ```bash
 source package /nbi/software/testing/bin/vcftools-0.1.15
 vcftools --gzvcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/genmap/BR_AT_NB_hostswap_callable.vcf.gz --missing-indv
@@ -321,7 +339,7 @@ plt.savefig('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calli
 ```
 Missingness for all eight samples is very low - they are all genuine M.persicae samples (as expected).
 
-Filter for SNP quality:
+#### Filter for SNP quality:
 
 SNPs were filtered to keep only bi-allelic SNPs, with minimum depth of 5, minimum quality score of 30, and maximum missingness of SNPs of 10% (with 8 samples this means that SNP positions must be present in all samples). 
 ```bash
@@ -343,7 +361,7 @@ bgzip /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzu
 ```
 The 1,744 SNPs that are specific to one experiment are unlikely to be responsible for adaptation to a new host.
 
-Question: how many SNPs are there between BR1_E1 and BR39_E1, and BR1_E2 and BR25_E2? This is the number of SNPs without a host swap.
+**Question:** how many SNPs are there between BR1_E1 and BR39_E1, and BR1_E2 and BR25_E2? This is the number of SNPs without a host swap.
 ```bash
 Directory=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/genmap
 zcat ${Directory}/BR_AT_NB_hostswap_callable_filtered_expt1.recode.vcf.gz > temp.vcf
@@ -368,7 +386,7 @@ At the end of experiment 1 there were 13,099 SNPs between samples kept on Brassi
 
 At the end of experiment 2 there were 12,058 SNPs between samples kept on Brassica rapa versus samples from the start of the experiment, compared to 13,423 and 12,255 in samples switched to Arabidopsis and N.benthamiana resectively.
 
-Question: did any SNPs occur in NB or AT host swaps in both experiments, but not in BR samples? If so then these would be candidates for causing host adaptation and could be investigated further - probably overkill to check this though.
+**Question:** did any SNPs occur in NB or AT host swaps in both experiments, but not in BR samples? If so then these would be candidates for causing host adaptation and could be investigated further - probably overkill to check this though.
 
 ```bash
 Directory=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/genmap
@@ -433,7 +451,10 @@ bedtools intersect -a ${Directory}/NB39_E1_swaponly.bed -b ${Directory}/NB25_E2_
 239 SNPs are found in both experiments from samples swapped onto N.benthamiana plants but not in samples kept on the same host, these could be investigated further to determine if they fall within coding regions and could be resposible for host adaptation, or are likely erroneous but missed by previous filters.
 
 ## Check for epigenetic changes over the course of the experiment with WGBS
-QC
+#### fastqc and qualimap
+Bisulfite treatment followed by PCR amplification specifically converts unmethylated cytosines to thymine, standard illumina sequencing is then performed. Fastqc can be used for QC, a specialist aligner is needed to take account of C2T conversions when aligning to the genome.
+
+Raw reads were assessed for quality and coverage of the clone O_v2 reference assembly:
 ```bash
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/WGBS/Archana_Mar2021/*/); do
     Fread=$(ls ${ReadDir}*_1.fq.gz)
@@ -454,7 +475,11 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
 done
 #57551367-57551414
 ```
-Trim
+Raw read folder has been compressed to save space.
+### Trimming
+#### Trim galore
+
+Adapters and low quality regions were trimmed from raw reads via trim-galore:
 ```bash
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/WGBS/Archana_Mar2021/*/); do
     sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
@@ -478,7 +503,8 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
 done 
 #57551302-57551349
 ```
-QC
+Trimmed reads were re-assessed for quality, the C2T conversion aware aligner bsmap was used to allow assessment of coverage of the clone O_v2 reference assembly, although the script does not keep these .bam files as written:
+
 ```bash
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/WGBS/Archana_Mar2021/*/trim_galore/); do
     Fread=$(ls ${ReadDir}*_1.fq.gz)
@@ -487,51 +513,22 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
     Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
     Gff=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3
     ProgDir=~/git_repos/Wrappers/NBI
-    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Gff $Fread $Rread 
+    sbatch $ProgDir/run_raw_bs_read_qc.sh $OutDir $Reference_genome $Gff $Fread $Rread 
 done
-#57554425-57554472
-```
-Alignment
-```bash
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/WGBS/Archana_Mar2021/*/trim_galore/); do
-    Jobs=$(squeue -u did23faz| grep 'bsmap'| wc -l)
-    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
-    Fread=$(ls ${ReadDir}*_1.fq.gz)
-    Rread=$(ls ${ReadDir}*_2.fq.gz)
-    OutDir=$(echo ${ReadDir} | sed 's@trim_galore@bsmap@g' | sed 's@dna_qc@alignment@g')
-    OutFile=$(basename $Fread | sed 's@_trimmed_1.fq.gz@bsmap@g')
-    ProgDir=~/git_repos/Wrappers/NBI
-    if [ ! -e "${OutDir}/${OutFile}_ratios.txt" ] || [ ! -s "${OutDir}/${OutFile}_ratios.txt" ] || [ ! -e "${OutDir}/${OutFile}.bam" ] || [ ! -s "${OutDir}/${OutFile}.bam" ] || [ ! -e "${OutDir}/${OutFile}.bam.bai" ] || [ ! -s "${OutDir}/${OutFile}.bam.bai" ]; then
-    while [ $Jobs -gt 5 ]; do
-        sleep 300s
-        printf "."
-        Jobs=$(squeue -u did23faz| grep 'bsmap'| wc -l)
-    done
-    sbatch $ProgDir/run_bsmap.sh $OutDir $OutFile $Reference_genome $Fread $Rread 
-    else
-    echo Already run for $ReadDir  
-    fi
-done
+#57795800-57795847
 
-#Output format: tab delimited txt file with the following columns:
-#chr: Chromosome or scaffold name where the cytosine is located.
-#pos: Position of the cytosine in the chromosome or scaffold.
-#strand: Strand of DNA (either "+" or "-") where the cytosine is located.
-#context: The sequence context of the cytosine. In this case, it is "CHH," which means the cytosine is followed by two non-cytosine bases in the 3' to 5' direction.
-#ratio: Methylation ratio at the given cytosine position. It represents the proportion of methylated cytosines out of the total observed cytosines.
-#eff_CT_count: Effective count of cytosines considered for calculating the methylation ratio. This count excludes certain cytosines based on specific criteria (e.g., filtering low-quality reads).
-#C_count: Count of methylated cytosines.
-#CT_count: Total count of cytosines (both methylated and unmethylated).
-#rev_G_count: Count of guanines on the reverse strand corresponding to the cytosine.
-#rev_GA_count: Count of guanine-adenine pairs on the reverse strand corresponding to the cytosine.
-#CI_lower: Lower bound of the confidence interval for the methylation ratio.
-#CI_upper: Upper bound of the confidence interval for the methylation ratio.
-
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/*/bsmap/*bsmap_ratios.txt); do
-echo $file >> logs/bsmap_report.txt
-cat $file | wc -l >> logs/bsmap_report.txt
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/WGS/Archana_Feb2021/*/trim_galore); do
+sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
+coverage=$(grep 'mean coverageData' ${ReadDir}qualimap/*_genome_results_gff.txt | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
+echo $sample raw reads have average coverage of ${coverage}
 done
 ```
+### BSmooth
+Common approaches for differential methylation analysis are Bsmooth, Methylkit or a custom approach to define differentially methylated regions (DMRs) DOI:10.1093/bib/bbx077. Here bsmooth:
+
+#### Bismark alignment
+
+The best C2T aware aligner seems to be bsmap based upon the literature (eg.: DOI:10.1016/j.csbj.2022.08.051), however the bsmooth package does not have pre-built support for a bsmap input but does for bismark. Bismark alignment, assessment and 'genome wide cytosine report' were prepared, .bam files from this alignment were not saved as we have bsmap generated files already:
 ```bash
 #Create bismark index
 source package 33c48798-0827-4add-8153-909c1bd83e89
@@ -552,14 +549,813 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
     sbatch $ProgDir/run_bismark0.24.1.sh $OutDir $OutFile $Reference_dir $Fread $Rread 
     #fi
 done
-#57758418-65
-#57765410-13
 #57768086-133
+```
+#### BSsmooth
+
+BSmooth is part of the BSseq R package, the package need to load the files into working memory, for our files this is more memory than a local machine has available, therefore R will have to be run on the HPC (which is a pain :().
+```bash
+#Make directory for output files:
+mkdir -p /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/
+
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/bsseq1.38.0.sif R
+#57758169
+```
+Differential methylation between week 1 samples:
+```R
+library(bsseq)
+library(stats)
+library(BiocParallel)
+
+#Read in data:
+col_names <- c("treatment", "replicate", "col")
+row_names <- c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3", "NB1_E2_1", "NB1_E2_2", "NB1_E2_3", "AT1_E2_1", "AT1_E2_2", "AT1_E2_3")
+data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
+df <- data.frame(data, row.names = row_names)
+colnames(df) <- col_names
+print("Input dataframe:")
+print(df)
+
+bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bismark/BR1_E2_1_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bismark/BR1_E2_2_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bismark/BR1_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_1/bismark/NB1_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_2/bismark/NB1_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_3/bismark/NB1_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_1/bismark/AT1_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_2/bismark/AT1_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_3/bismark/AT1_E2_3_bismark.deduplicated.CpG_report.txt"),
+    colData = df,
+    rmZeroCov = FALSE,
+    strandCollapse = TRUE,
+    verbose = TRUE)
+save(bsseq, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/1_bsseq.RData")
+
+sapply(assays(bsseq, withDimnames = FALSE), class)
+print("Bsseq object:")
+bsseq
+pData(bsseq)
+
+print("The average coverage of CpGs:")
+round(colMeans(getCoverage(bsseq)), 1) 
+#BR1_E2_1 BR1_E2_2 BR1_E2_3 NB1_E2_1 NB1_E2_2 NB1_E2_3 AT1_E2_1 AT1_E2_2 AT1_E2_3
+#    19.3     26.0     22.2     22.0     23.5     24.7     23.0     33.6    20.5
+print("The number of CpGs:")
+length(bsseq) 
+#10,962,492
+print("Number of CpGs which are covered by at least 1 read in all samples:")
+sum(rowSums(getCoverage(bsseq) >= 1) == 7)
+#65,854
+print("Number of CpGs with 0 coverage in all samples:")
+sum(rowSums(getCoverage(bsseq)) == 0)
+#265,410
+
+#Perform smoothing:
+#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
+
+bssmooth <- BSmooth(
+    BSseq = bsseq, 
+    ns = 70,
+    h = 1000,
+    maxGap = 10^8,
+    BPPARAM = MulticoreParam(workers = 1), 
+    verbose = TRUE)
+bssmooth
+save(bssmooth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/1_bsmooth.RData")
+
+#Remove CpGs with coverage below 4 in all samples:
+BS.cov <- getCoverage(bssmooth)
+keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
+print("The number of CpGs with coverage >=4 in all samples:")
+length(keepLoci.ex)
+#9,711,258
+bssmooth <- bssmooth[keepLoci.ex,]
+
+
+#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
+print("Compute t-stats vs AT:")
+AT.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("AT1_E2_1", "AT1_E2_2", "AT1_E2_3"),  
+                                    group2 = c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+AT.tstat
+#9,711,258 methylation loci
+temp <- AT.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9,710,695 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.575393  1.690201
+print("Compute t-stats vs NB:")
+NB.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("NB1_E2_1", "NB1_E2_2", "NB1_E2_3"),  
+                                    group2 = c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+NB.tstat
+#9,711,258 methylation loci
+temp <- NB.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9,710,588 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.597031  1.661042
+
+
+#Finding DMRs
+print("Find DMRs vs AT:")
+dmrs0 <- dmrFinder(AT.tstat, cutoff = c(-1.575393, 1.690201), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation of at least 0.1.
+AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(AT.dmrs) #116
+head(AT.dmrs, n = 3)
+write.table(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT1_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+print("Find DMRs vs NB:")
+dmrs0 <- dmrFinder(NB.tstat, cutoff = c(-1.597031, 1.661042), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylationof at least 0.1.
+NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(NB.dmrs) #109
+head(NB.dmrs, n = 3)
+write.table(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB1_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Plot the top DMRs
+#blue=BR,red=NB,green=AT
+print("Plot top AT DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT1_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, AT.dmrs[1:116,], extend = 5000, 
+                addRegions = AT.dmrs)
+dev.off()
+print("Plot top NB DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB1_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, NB.dmrs[1:109,], extend = 5000, 
+                addRegions = NB.dmrs)
+dev.off()
+```
+Differential methylation between week 3 samples:
+```R
+library(bsseq)
+library(stats)
+library(BiocParallel)
+
+#Read in data:
+col_names <- c("treatment", "replicate", "col")
+row_names <- c("BR3_E2_1", "BR3_E2_2", "BR3_E2_3", "NB3_E2_1", "NB3_E2_2", "NB3_E2_3", "AT3_E2_1", "AT3_E2_2", "AT3_E2_3")
+data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
+df <- data.frame(data, row.names = row_names)
+colnames(df) <- col_names
+print("Input dataframe:")
+print(df)
+
+bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_1/bismark/BR3_E2_1_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_2/bismark/BR3_E2_2_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_3/bismark/BR3_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_1/bismark/NB3_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_2/bismark/NB3_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_3/bismark/NB3_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_1/bismark/AT3_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_2/bismark/AT3_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_3/bismark/AT3_E2_3_bismark.deduplicated.CpG_report.txt"),
+    colData = df,
+    rmZeroCov = FALSE,
+    strandCollapse = TRUE,
+    verbose = TRUE)
+save(bsseq, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/3_bsseq.RData")
+
+sapply(assays(bsseq, withDimnames = FALSE), class)
+print("Bsseq object:")
+bsseq
+pData(bsseq)
+
+print("The average coverage of CpGs:")
+round(colMeans(getCoverage(bsseq)), 1)
+#BR3_E2_1 BR3_E2_2 BR3_E2_3 NB3_E2_1 NB3_E2_2 NB3_E2_3 AT3_E2_1 AT3_E2_2 AT3_E2_3
+#    30.3     26.1     24.2     28.7     23.0     23.1     24.9     24.9    22.3
+print("The number of CpGs:")
+length(bsseq)
+#10,962,492
+print("Number of CpGs which are covered by at least 1 read in all samples:")
+sum(rowSums(getCoverage(bsseq) >= 1) == 7)
+#63,718
+print("Number of CpGs with 0 coverage in all samples:")
+sum(rowSums(getCoverage(bsseq)) == 0)
+#271,066
+
+
+#Perform smoothing:
+#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
+
+bssmooth <- BSmooth(
+    BSseq = bsseq, 
+    ns = 70,
+    h = 1000,
+    maxGap = 10^8,
+    BPPARAM = MulticoreParam(workers = 1), 
+    verbose = TRUE)
+bssmooth
+save(bssmooth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/3_bsmooth.RData")
+
+#Remove CpGs with coverage below 4 in all samples:
+BS.cov <- getCoverage(bssmooth)
+keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
+print("The number of CpGs with coverage >=4 in all samples:")
+length(keepLoci.ex)
+#9,764,358
+bssmooth <- bssmooth[keepLoci.ex,]
+
+
+#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
+print("Compute t-stats vs AT:")
+AT.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("AT3_E2_1", "AT3_E2_2", "AT3_E2_3"),  
+                                    group2 = c("BR3_E2_1", "BR3_E2_2", "BR3_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+AT.tstat
+#9,764,358 methylation loci
+temp <- AT.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9,763,691 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.496376  1.784706
+print("Compute t-stats vs NB:")
+NB.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("NB3_E2_1", "NB3_E2_2", "NB3_E2_3"),  
+                                    group2 = c("BR3_E2_1", "BR3_E2_2", "BR3_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+NB.tstat
+#9,764,358 methylation loci
+temp <- NB.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9,763,600 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.529655  1.735956
+
+
+#Finding DMRs
+print("Find DMRs vs AT:")
+dmrs0 <- dmrFinder(AT.tstat, cutoff = c(-1.496376, 1.784706), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation of at least 0.1.
+AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(AT.dmrs) #130
+head(AT.dmrs, n = 3)
+write.table(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT3_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+print("Find DMRs vs NB:")
+dmrs0 <- dmrFinder(NB.tstat, cutoff = c(-1.529655, 1.735956), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylationof at least 0.1.
+NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(NB.dmrs) #179
+head(NB.dmrs, n = 3)
+write.table(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB3_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Plot the top DMRs
+#blue=BR,red=NB,green=AT
+print("Plot top AT DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT3_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, AT.dmrs[1:130,], extend = 5000, 
+                addRegions = AT.dmrs)
+dev.off()
+print("Plot top NB DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB3_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, NB.dmrs[1:179,], extend = 5000, 
+                addRegions = NB.dmrs)
+dev.off()
+```
+Differential methylation between week 6 samples:
+```R
+library(bsseq)
+library(stats)
+library(BiocParallel)
+
+#Read in data:
+col_names <- c("treatment", "replicate", "col")
+row_names <- c("BR6_E2_1", "BR6_E2_2", "BR6_E2_3", "NB6_E2_1", "NB6_E2_2", "NB6_E2_3", "AT6_E2_1", "AT6_E2_2", "AT6_E2_3")
+data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
+df <- data.frame(data, row.names = row_names)
+colnames(df) <- col_names
+print("Input dataframe:")
+print(df)
+
+bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bismark/BR6_E2_1_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_2/bismark/BR6_E2_2_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_3/bismark/BR6_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_1/bismark/NB6_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_2/bismark/NB6_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_3/bismark/NB6_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_1/bismark/AT6_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_2/bismark/AT6_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_3/bismark/AT6_E2_3_bismark.deduplicated.CpG_report.txt"),
+    colData = df,
+    rmZeroCov = FALSE,
+    strandCollapse = TRUE,
+    verbose = TRUE)
+save(bsseq, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/6_bsseq.RData")
+
+sapply(assays(bsseq, withDimnames = FALSE), class)
+print("Bsseq object:")
+bsseq
+pData(bsseq)
+
+print("The average coverage of CpGs:")
+round(colMeans(getCoverage(bsseq)), 1)
+#BR6_E2_1 BR6_E2_2 BR6_E2_3 NB6_E2_1 NB6_E2_2 NB6_E2_3 AT6_E2_1 AT6_E2_2 AT6_E2_3
+#    20.6     18.7     20.3     23.2     19.6     33.5     21.9     23.9    22.9
+print("The number of CpGs:")
+length(bsseq)
+#10,962,492
+print("Number of CpGs which are covered by at least 1 read in all samples:")
+sum(rowSums(getCoverage(bsseq) >= 1) == 7)
+#67,436
+print("Number of CpGs with 0 coverage in all samples:")
+sum(rowSums(getCoverage(bsseq)) == 0)
+#261,473
+
+
+#Perform smoothing:
+#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
+
+bssmooth <- BSmooth(
+    BSseq = bsseq, 
+    ns = 70,
+    h = 1000,
+    maxGap = 10^8,
+    BPPARAM = MulticoreParam(workers = 1), 
+    verbose = TRUE)
+bssmooth
+save(bssmooth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/6_bsmooth.RData")
+
+#Remove CpGs with coverage below 4 in all samples:
+BS.cov <- getCoverage(bssmooth)
+keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
+print("The number of CpGs with coverage >=4 in all samples:")
+length(keepLoci.ex)
+#9,673,446
+bssmooth <- bssmooth[keepLoci.ex,]
+
+
+#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
+print("Compute t-stats vs AT:")
+AT.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("AT6_E2_1", "AT6_E2_2", "AT6_E2_3"),  
+                                    group2 = c("BR6_E2_1", "BR6_E2_2", "BR6_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+AT.tstat
+#9,673,446 methylation loci
+temp <- AT.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9,672,758 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.821612  1.508577
+print("Compute t-stats vs NB:")
+NB.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("NB6_E2_1", "NB6_E2_2", "NB6_E2_3"),  
+                                    group2 = c("BR6_E2_1", "BR6_E2_2", "BR6_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+NB.tstat
+#9,673,446 methylation loci
+temp <- NB.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9,672,792 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.926534  1.424541
+
+
+#Finding DMRs
+print("Find DMRs vs AT:")
+dmrs0 <- dmrFinder(AT.tstat, cutoff = c(-1.821612, 1.508577), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation of at least 0.1.
+AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(AT.dmrs) #240
+head(AT.dmrs, n = 3)
+write.table(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT6_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+print("Find DMRs vs NB:")
+dmrs0 <- dmrFinder(NB.tstat, cutoff = c(-1.926534, 1.424541), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylationof at least 0.1.
+NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(NB.dmrs) #353
+head(NB.dmrs, n = 3)
+write.table(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB6_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Plot the top DMRs
+#blue=BR,red=NB,green=AT
+print("Plot top AT DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT6_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, AT.dmrs[1:240,], extend = 5000, 
+                addRegions = AT.dmrs)
+dev.off()
+print("Plot top NB DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB6_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, NB.dmrs[1:353,], extend = 5000, 
+                addRegions = NB.dmrs)
+dev.off()
+```
+Differential methylation between week 9 samples:
+```R
+library(bsseq)
+library(stats)
+library(BiocParallel)
+
+#Read in data:
+col_names <- c("treatment", "replicate", "col")
+row_names <- c("BR9_E2_1", "BR9_E2_2", "BR9_E2_3", "NB9_E2_1", "NB9_E2_2", "NB9_E2_3", "AT9_E2_1", "AT9_E2_2", "AT9_E2_3")
+data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
+df <- data.frame(data, row.names = row_names)
+colnames(df) <- col_names
+print("Input dataframe:")
+print(df)
+
+bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_1/bismark/BR9_E2_1_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_2/bismark/BR9_E2_2_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_3/bismark/BR9_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_1/bismark/NB9_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_2/bismark/NB9_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_3/bismark/NB9_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_1/bismark/AT9_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_2/bismark/AT9_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_3/bismark/AT9_E2_3_bismark.deduplicated.CpG_report.txt"),
+    colData = df,
+    rmZeroCov = FALSE,
+    strandCollapse = TRUE,
+    verbose = TRUE)
+save(bsseq, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/9_bsseq.RData")
+
+sapply(assays(bsseq, withDimnames = FALSE), class)
+print("Bsseq object:")
+bsseq
+pData(bsseq)
+
+print("The average coverage of CpGs:")
+round(colMeans(getCoverage(bsseq)), 1)
+#BR9_E2_1 BR9_E2_2 BR9_E2_3 NB9_E2_1 NB9_E2_2 NB9_E2_3 AT9_E2_1 AT9_E2_2 AT9_E2_3
+#    23.1     22.8     23.3     23.5     28.3     19.0     23.6     22.5    23.3
+print("The number of CpGs:")
+length(bsseq)
+#10,962,492
+print("Number of CpGs which are covered by at least 1 read in all samples:")
+sum(rowSums(getCoverage(bsseq) >= 1) == 7)
+#65,102
+print("Number of CpGs with 0 coverage in all samples:")
+sum(rowSums(getCoverage(bsseq)) == 0)
+#266,298
+
+
+#Perform smoothing:
+#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
+
+bssmooth <- BSmooth(
+    BSseq = bsseq, 
+    ns = 70,
+    h = 1000,
+    maxGap = 10^8,
+    BPPARAM = MulticoreParam(workers = 1), 
+    verbose = TRUE)
+bssmooth
+save(bssmooth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/9_bsmooth.RData")
+
+#Remove CpGs with coverage below 4 in all samples:
+BS.cov <- getCoverage(bssmooth)
+keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
+print("The number of CpGs with coverage >=4 in all samples:")
+length(keepLoci.ex)
+#9,717,924
+bssmooth <- bssmooth[keepLoci.ex,]
+
+
+#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
+print("Compute t-stats vs AT:")
+AT.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("AT9_E2_1", "AT9_E2_2", "AT9_E2_3"),  
+                                    group2 = c("BR9_E2_1", "BR9_E2_2", "BR9_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+AT.tstat
+#9,717,924 methylation loci
+temp <- AT.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9,717,196 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.610949  1.665140
+print("Compute t-stats vs NB:")
+NB.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("NB9_E2_1", "NB9_E2_2", "NB9_E2_3"),  
+                                    group2 = c("BR9_E2_1", "BR9_E2_2", "BR9_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+NB.tstat
+#9,717,924 methylation loci
+temp <- NB.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9,717,157 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.575890  1.750382
+
+
+#Finding DMRs
+print("Find DMRs vs AT:")
+dmrs0 <- dmrFinder(AT.tstat, cutoff = c(-1.610949, 1.665140), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation of at least 0.1.
+AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(AT.dmrs) #208
+head(AT.dmrs, n = 3)
+write.table(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT9_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+print("Find DMRs vs NB:")
+dmrs0 <- dmrFinder(NB.tstat, cutoff = c(-1.575890, 1.750382), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylationof at least 0.1.
+NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(NB.dmrs) #405
+head(NB.dmrs, n = 3)
+write.table(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB9_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Plot the top DMRs
+#blue=BR,red=NB,green=AT
+print("Plot top AT DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT9_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, AT.dmrs[1:208,], extend = 5000, 
+                addRegions = AT.dmrs)
+dev.off()
+print("Plot top NB DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB9_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, NB.dmrs[1:405,], extend = 5000, 
+                addRegions = NB.dmrs)
+dev.off()
+```
+Differential methylation between week 25 samples:
+```R
+library(bsseq)
+library(stats)
+library(BiocParallel)
+
+#Read in data:
+col_names <- c("treatment", "replicate", "col")
+row_names <- c("BR25_E2_1", "BR25_E2_2", "BR25_E2_3", "NB25_E2_1", "NB25_E2_2", "NB25_E2_3", "AT25_E2_1", "AT25_E2_2", "AT25_E2_3")
+data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
+df <- data.frame(data, row.names = row_names)
+colnames(df) <- col_names
+print("Input dataframe:")
+print(df)
+
+bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_1/bismark/BR25_E2_1_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_2/bismark/BR25_E2_2_bismark.deduplicated.CpG_report.txt",
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_3/bismark/BR25_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_1/bismark/NB25_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_2/bismark/NB25_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_3/bismark/NB25_E2_3_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_1/bismark/AT25_E2_1_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_2/bismark/AT25_E2_2_bismark.deduplicated.CpG_report.txt", 
+     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_3/bismark/AT25_E2_3_bismark.deduplicated.CpG_report.txt"),
+    colData = df,
+    rmZeroCov = FALSE,
+    strandCollapse = TRUE,
+    verbose = TRUE)
+save(bsseq, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/25_bsseq.RData")
+
+sapply(assays(bsseq, withDimnames = FALSE), class)
+print("Bsseq object:")
+bsseq
+pData(bsseq)
+
+print("The average coverage of CpGs:")
+round(colMeans(getCoverage(bsseq)), 1)
+#BR25_E2_1 BR25_E2_2 BR25_E2_3 NB25_E2_1 NB25_E2_2 NB25_E2_3 AT25_E2_1 AT25_E2_2 AT25_E2_3
+#     20.3      19.4      22.2      22.5      23.5      21.7      25.0      20.8     30.0
+print("The number of CpGs:")
+length(bsseq)
+#10,962,492
+print("Number of CpGs which are covered by at least 1 read in all samples:")
+sum(rowSums(getCoverage(bsseq) >= 1) == 7)
+#65,610
+print("Number of CpGs with 0 coverage in all samples:")
+sum(rowSums(getCoverage(bsseq)) == 0)
+#262,245
+
+
+#Perform smoothing:
+#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
+
+bssmooth <- BSmooth(
+    BSseq = bsseq, 
+    ns = 70,
+    h = 1000,
+    maxGap = 10^8,
+    BPPARAM = MulticoreParam(workers = 1), 
+    verbose = TRUE)
+bssmooth
+save(bssmooth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/25_bsmooth.RData")
+
+#Remove CpGs with coverage below 4 in all samples:
+BS.cov <- getCoverage(bssmooth)
+keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
+                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
+print("The number of CpGs with coverage >=4 in all samples:")
+length(keepLoci.ex)
+#9,706,324
+bssmooth <- bssmooth[keepLoci.ex,]
+
+
+#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
+print("Compute t-stats vs AT:")
+AT.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("AT25_E2_1", "AT25_E2_2", "AT25_E2_3"),  
+                                    group2 = c("BR25_E2_1", "BR25_E2_2", "BR25_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+AT.tstat
+#9706324 methylation loci
+temp <- AT.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9705661 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.552562  1.728513 
+
+print("Compute t-stats vs NB:")
+NB.tstat <- BSmooth.tstat(bssmooth,
+                                    group1 = c("NB25_E2_1", "NB25_E2_2", "NB25_E2_3"),  
+                                    group2 = c("BR25_E2_1", "BR25_E2_2", "BR25_E2_3"),
+                                    estimate.var = "same",
+                                    local.correct = TRUE,
+                                    verbose = TRUE)
+NB.tstat
+#9706324 methylation loci
+temp <- NB.tstat@stats
+temp2 <- data.frame(temp)
+temp2 <- na.omit(temp2) #9705661 methylation loci remain
+quantile(temp2$tstat, c(0.025, 0.975))
+#     2.5%     97.5% 
+#-1.496220  1.789964
+
+#Finding DMRs
+print("Find DMRs vs AT:")
+dmrs0 <- dmrFinder(AT.tstat, cutoff = c(-1.552562, 1.728513), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation of at least 0.1.
+AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(AT.dmrs) #347
+head(AT.dmrs, n = 3)
+write.table(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT25_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+print("Find DMRs vs NB:")
+dmrs0 <- dmrFinder(NB.tstat, cutoff = c(-1.496220, 1.789964), maxGap=300, verbose = TRUE)
+#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation of at least 0.1.
+NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
+nrow(NB.dmrs) #521
+head(NB.dmrs, n = 3)
+write.table(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB25_dmrs.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Plot the DMRs
+#blue=BR,red=NB,green=AT
+print("Plot top AT DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT25_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, AT.dmrs[1:347,], extend = 5000, 
+                addRegions = AT.dmrs)
+dev.off()
+print("Plot top NB DMRs:")
+pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB25_dmrs_top1000.pdf", width = 10, height = 5)
+plotManyRegions(bssmooth, NB.dmrs[1:521,], extend = 5000, 
+                addRegions = NB.dmrs)
+dev.off()
+```
+Convert from bsmap format to bsseq input format. - ERROR
+```R
+library(bsseq)
+
+read.bsmap <- function(file) {
+    dat <- read.table(
+        file,
+        skip = 1,
+        row.names = NULL,
+        col.names = c("chr", "pos", "strand", "context", "ratio", "eff_CT_count", "C_count", "CT_count", "rev_G_count", "rev_GA_count", "CI_lower", "CI_upper"),
+        colClasses = c("character", "integer", "character", "character", "numeric", "numeric", "integer", "integer", "integer", "integer", "numeric", "numeric"))
+    #remove all non-CpG calls.  This includes SNPs
+    dat <- dat[dat$context == "CG", ]
+    dat$context <- NULL
+    dat$chr <- paste("chr", dat$chr, sep = "")
+    #join separate lines for each strand
+    tmp <- dat[dat$strand == "+", ]
+    BS.forward <- BSseq(
+        pos = tmp$pos,
+        chr = tmp$chr,
+        M = as.matrix(tmp$C_count, ncol = 1),
+        Cov = as.matrix(tmp$CT_count, ncol = 1),
+        sampleNames = "forward")
+    tmp <- dat[dat$strand == "-", ]
+    BS.reverse <- BSseq(
+        pos = tmp$pos - 1L,
+        chr = tmp$chr,
+        M = as.matrix(tmp$C_count, ncol = 1),
+        Cov = as.matrix(tmp$CT_count, ncol = 1),
+        sampleNames = "reverse")
+    BS <- combine(BS.forward, BS.reverse)
+    BS <- collapseBSseq(BS, group = c("a", "a"), type = "integer")
+    BS
+}
+
+# List all the files
+file_paths <- list.files("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/", pattern = "bsmap_ratios_filtered.txt", recursive = TRUE, full.names = TRUE)
+
+# Loop through each file and combine
+bs_objects <- list()
+
+for (file_path in file_paths) {
+  sample_name <- sub("_bsmap_ratios_filtered", "", tools::file_path_sans_ext(basename(file_path)))
+  assign(paste0("BS.", sample_name), read.bsmap(file_path))
+  bs_objects[[sample_name]] <- get(paste0("BS.", sample_name))
+  sampleNames(bs_objects[[sample_name]]) <- sample_name
+}
+
+BS.hostswap <- do.call(combine, bs_objects)
+
+#Add replicate information
+pData(BS.hostswap)$Rep <- c("replicate1", "replicate2", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2")
+validObject(BS.hostswap)
+pData(BS.hostswap)
+
+#Save to file
+save(BS.hostswap, file = "BS.hostswap.rda")
+tools::resaveRdaFiles("BS.hostswap.rda")
+```
+
+### Methylkit
+Common approaches for differential methylation analysis are Bsmooth, Methylkit or a custom approach to define differentially methylated regions (DMRs) DOI:10.1093/bib/bbx077. Here methylkit:
+
+#### BSmap alignment
+
+The best C2T aware aligner seems to be bsmap based upon the literature (eg.: DOI:10.1016/j.csbj.2022.08.051). Bsmap alignment and cytosine report was performed:
+```bash
+for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/WGBS/Archana_Mar2021/*/trim_galore/); do
+    Jobs=$(squeue -u did23faz| grep 'bsmap'| wc -l)
+    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+    Fread=$(ls ${ReadDir}*_1.fq.gz)
+    Rread=$(ls ${ReadDir}*_2.fq.gz)
+    OutDir=$(echo ${ReadDir} | sed 's@trim_galore@bsmap@g' | sed 's@dna_qc@alignment@g')
+    OutFile=$(basename $Fread | sed 's@_trimmed_1.fq.gz@bsmap@g')
+    ProgDir=~/git_repos/Wrappers/NBI
+    if [ ! -e "${OutDir}/${OutFile}_ratios.txt" ] || [ ! -s "${OutDir}/${OutFile}_ratios.txt" ] || [ ! -e "${OutDir}/${OutFile}.bam" ] || [ ! -s "${OutDir}/${OutFile}.bam" ] || [ ! -e "${OutDir}/${OutFile}.bam.bai" ] || [ ! -s "${OutDir}/${OutFile}.bam.bai" ]; then
+    while [ $Jobs -gt 5 ]; do
+        sleep 300s
+        printf "."
+        Jobs=$(squeue -u did23faz| grep 'bsmap'| wc -l)
+    done
+    sbatch $ProgDir/run_bsmap.sh $OutDir $OutFile $Reference_genome $Fread $Rread 
+    else
+    echo Already run for $ReadDir  
+    fi
+done
+```
+**Cytosine report Output format**: tab delimited txt file with the following columns:
+chr: Chromosome or scaffold name where the cytosine is located.
+pos: Position of the cytosine in the chromosome or scaffold.
+strand: Strand of DNA (either "+" or "-") where the cytosine is located.
+context: The sequence context of the cytosine. In this case, it is "CHH," which means the cytosine is followed by two non-cytosine bases in the 3' to 5' direction.
+ratio: Methylation ratio at the given cytosine position. It represents the proportion of methylated cytosines out of the total observed cytosines.
+eff_CT_count: Effective count of cytosines considered for calculating the methylation ratio. This count excludes certain cytosines based on specific criteria (e.g., filtering low-quality reads).
+C_count: Count of methylated cytosines.
+CT_count: Total count of cytosines (both methylated and unmethylated).
+rev_G_count: Count of guanines on the reverse strand corresponding to the cytosine.
+rev_GA_count: Count of guanine-adenine pairs on the reverse strand corresponding to the cytosine.
+CI_lower: Lower bound of the confidence interval for the methylation ratio.
+CI_upper: Upper bound of the confidence interval for the methylation ratio.
+
+#### Filter cytosine postions
+```bash
+for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/*/bsmap/*bsmap_ratios.txt); do
+echo $file >> logs/bsmap_report.txt
+cat $file | wc -l >> logs/bsmap_report.txt
+done
 ```
 Samples BR0_E2_2 and BR0_E2_3 have significantly fewer methylation sites than other samples - ommitted from further analysis.
 ```bash
 ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/*/bsmap/*bsmap_ratios.txt | grep -v 'BR0_E2_2\|BR0_E2_3' > temp_file_list.txt
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
 ```
 Only cytosines with a depth of at least four in all libraries were considered:
 ```bash
@@ -623,7 +1419,9 @@ for file in $(cat temp_file_list.txt); do
   grep -F -w -f common_ids_000.txt $file >> $(dirname $file)/$(basename $file | sed 's@.txt@_filtered.txt@g')
 done
 ```
-Universally un-methylated sites were removed:
+Therefore we have 72,842,711 cytosine positions with at least 4x coverage across all samples, but have dropped samples BR0_E2_2, BR0_E2_3, AT1_E2_3 & NB9_E2_3. This leaves only one 0 week sample remaining. No samples were dropped in the bsmooth analysis.
+
+Renomve universally un-methylated sites (to save processing time later):
 ```bash
 #Find sites where ratio is always zero
 for file in $(cat temp_file_list.txt); do
@@ -642,13 +1440,10 @@ for file in $(cat temp_file_list0.txt | grep -v 'AT1_E2_3\|NB9_E2_3'); do
     cat temp_common_ids_0.txt | wc -l >> logs/unmethylated_report.txt
 done
 cp temp_common_ids_0.txt common_ids_0.txt
-#The number of sites which are totally unmethylated across all samples is only 690. Given this low number I will not bother to remove these sites.
 ```
-Custom
-```bash
+The number of sites which are totally unmethylated across all samples is only 690. Given this low number I will not bother to remove these sites.
 
-```
-Methylkit
+#### Methylkit
 ```bash
 #Seperate CpG methylation context Cs.
 for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/*/bsmap/*filtered.txt); do
@@ -657,37 +1452,22 @@ for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/align
 done
 #There are 13,682,374 CpG sites
 
-#Create bed file for gene annotations
-awk -F'\t' '$3 == "gene" {print $1 "\t" $4-1 "\t" $5 "\t" $9}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3 > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed
+#Create output directory for output files:
+mkdir -p /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/
 
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/methylkit1.28.0.sif R
-sbatch ~/git_repos/Wrappers/NBI/temp3.sh
-#57758156-61
 ```
-test:
-```bash
-for file in \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bsmap/CpG_BR1_E2_1_bsmap_ratios_filtered.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bsmap/CpG_BR1_E2_2_bsmap_ratios_filtered.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bsmap/CpG_BR1_E2_3_bsmap_ratios_filtered.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_1/bsmap/CpG_NB1_E2_1_bsmap_ratios_filtered.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_2/bsmap/CpG_NB1_E2_2_bsmap_ratios_filtered.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_3/bsmap/CpG_NB1_E2_3_bsmap_ratios_filtered.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_1/bsmap/CpG_AT1_E2_1_bsmap_ratios_filtered.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_2/bsmap/CpG_AT1_E2_2_bsmap_ratios_filtered.txt"; do
-    tail -n 100000 $file > ./temp_$(basename $file)
-done
-```
+Differential methylation between CpG sites, week 1 samples:
 ```R
 library(methylKit)
 #Read in the methylation ratio files
-week1_file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_CpG_BR1_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_CpG_BR1_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_CpG_BR1_E2_3_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_CpG_NB1_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_CpG_NB1_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_CpG_NB1_E2_3_bsmap_ratios_filtered.txt")
-week1=methRead(week1_file.list, 
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bsmap/CpG_BR1_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bsmap/CpG_BR1_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bsmap/CpG_BR1_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_1/bsmap/CpG_NB1_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_2/bsmap/CpG_NB1_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_3/bsmap/CpG_NB1_E2_3_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
     sample.id=list("BR1_E2_1","BR1_E2_2","BR1_E2_3","NB1_E2_1","NB1_E2_2","NB1_E2_3"),
     assembly="O_v2",
     header=TRUE,
@@ -696,1291 +1476,2114 @@ week1=methRead(week1_file.list,
     context="CpG",
     resolution="base",
     pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-week1
-head(week1[[1]])
-png("CpGhistogram1.png")
-getMethylationStats(week1[[1]], plot=TRUE, both.strands=FALSE)
+NB.week1
+head(NB.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR1_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[1]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR1_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[2]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR1_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[3]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[6]], plot=TRUE, both.strands=FALSE)
 dev.off()
 
 #Normalisation and filtering
-week1.filt <- filterByCoverage(week1,
+NB.week1.filt <- filterByCoverage(NB.week1,
                       lo.count=4,
                       lo.perc=NULL,
                       hi.count=NULL,
                       hi.perc=99.9)
 
-week1.filt.norm <- normalizeCoverage(week1.filt, method = "median")
-week1.meth <- unite(week1.filt.norm, destrand=FALSE)
-week1.meth
+NB.week1.filt.norm <- normalizeCoverage(NB.week1.filt, method = "median")
+NB.week1.meth <- unite(NB.week1.filt.norm, destrand=FALSE)
+NB.week1.meth
 # get percent methylation matrix
-pm=percMethylation(week1.meth)
+NB.pm=percMethylation(NB.week1.meth)
 # calculate standard deviation of CpGs
-sds=matrixStats::rowSds(pm)
+NB.sds=matrixStats::rowSds(NB.pm)
 # Visualize the distribution of the per-CpG standard deviation
 # to determine a suitable cutoff
-png("sdshistogram1.png")
-hist(sds, breaks = 100)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_sdshistogram.png")
+hist(NB.sds, breaks = 100)
 dev.off()
 # keep only CpG with standard deviations larger than 2%
-week1.meth <- week1.meth[sds > 2]
+NB.week1.meth <- NB.week1.meth[NB.sds > 2]
 # This leaves us with this number of CpG sites
-nrow(week1.meth)
+nrow(NB.week1.meth)
 
 #Plot data structure
-png("correlation1.png")
-getCorrelation(week1.meth,plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_correlation.png")
+getCorrelation(NB.week1.meth,plot=TRUE)
 dev.off()
-png("dendogram1.png")
-clusterSamples(week1.meth, dist="correlation", method="ward", plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_dendogram.png")
+clusterSamples(NB.week1.meth, dist="correlation", method="ward", plot=TRUE)
 dev.off()
-png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/PCA1.png")
-PCASamples(week1.meth)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_PCA.png")
+PCASamples(NB.week1.meth)
 dev.off()
 
+save(NB.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1meth.RData")
+
+#################################################################################################################################
+#Read in the methylation ratio files
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bsmap/CpG_BR1_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bsmap/CpG_BR1_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bsmap/CpG_BR1_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_1/bsmap/CpG_AT1_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_2/bsmap/CpG_AT1_E2_2_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR1_E2_1","BR1_E2_2","BR1_E2_3","AT1_E2_1","AT1_E2_2"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+head(AT.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_E2_1_CpGhistogram.png")
+getMethylationStats(AT.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_E2_2_CpGhistogram.png")
+getMethylationStats(AT.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+
+#Normalisation and filtering
+AT.week1.filt <- filterByCoverage(AT.week1,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+
+AT.week1.filt.norm <- normalizeCoverage(AT.week1.filt, method = "median")
+AT.week1.meth <- unite(AT.week1.filt.norm, destrand=FALSE)
+AT.week1.meth
+# get percent methylation matrix
+AT.pm=percMethylation(AT.week1.meth)
+# calculate standard deviation of CpGs
+AT.sds=matrixStats::rowSds(AT.pm)
+# Visualize the distribution of the per-CpG standard deviation
+# to determine a suitable cutoff
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_sdshistogram.png")
+hist(AT.sds, breaks = 100)
+dev.off()
+# keep only CpG with standard deviations larger than 2%
+AT.week1.meth <- AT.week1.meth[AT.sds > 2]
+# This leaves us with this number of CpG sites
+nrow(AT.week1.meth)
+
+#Plot data structure
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_correlation.png")
+getCorrelation(AT.week1.meth,plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_dendogram.png")
+clusterSamples(AT.week1.meth, dist="correlation", method="ward", plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_PCA.png")
+PCASamples(AT.week1.meth)
+dev.off()
+
+save(AT.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1meth.RData")
+
+#################################################################################################################################
+
 #Identify differential methylation
-#Subset for NB
-Diff1 <- calculateDiffMeth(week1.meth,
+NB.Diff <- calculateDiffMeth(NB.week1.meth,
                             treatment=c(0,0,0,1,1,1),
                             overdispersion = "MN",
                             adjust="BH")
-Diff1
-png("Volcano1.png")
-plot(Diff1$meth.diff, -log10(Diff1$qvalue))
-abline(v=0)
+NB.Diff
+save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Volcano.png")
+#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_diffmethperchr.png")
+diffMethPerChr(NB.Diff) 
 dev.off()
 
-diffMethPerChr(Diff1) #Cannot plot figure, excluded all available chromosomes.
-
 # get hyper methylated bases and order by qvalue
-Diff1.25p.hyper <- getMethylDiff(Diff1,
+NB.Diff.25p.hyper <- getMethylDiff(NB.Diff,
                               difference=25,
                               qvalue=0.01,
                               type="hyper")
-Diff1.25p.hyper <- Diff1.25p.hyper[order(Diff1.25p.hyper$qvalue), ]
+NB.Diff.25p.hyper <- NB.Diff.25p.hyper[order(NB.Diff.25p.hyper$qvalue), ]
 
 # get hypo methylated bases and order by qvalue
-Diff1.25p.hypo <- getMethylDiff(Diff1,
+NB.Diff.25p.hypo <- getMethylDiff(NB.Diff,
                              difference=25,
                              qvalue=0.01,
                              type="hypo")
-Diff1.25p.hypo <- Diff1.25p.hypo[order(Diff1.25p.hypo$qvalue), ]
+NB.Diff.25p.hypo <- NB.Diff.25p.hypo[order(NB.Diff.25p.hypo$qvalue), ]
 
 # get all differentially methylated bases and order by qvalue
-Diff1.25p <- getMethylDiff(Diff1,
+NB.Diff.25p <- getMethylDiff(NB.Diff,
                         difference=25,
                         qvalue=0.01)
-Diff1.25p <- Diff1.25p[order(Diff1.25p$qvalue), ]
+NB.Diff.25p <- NB.Diff.25p[order(NB.Diff.25p$qvalue), ]
 
-#Annotate CpGs in genic regions
-refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed")
-#Annotate hypermethylated CpGs ("target") with promoter/exon/intron
-sink("Diff1p.hyper.anot.txt")
-Diff1.25p.hyper.anot <- annotateWithGeneParts(target = as(Diff1p.hyper,"GRanges"),
-                                       feature = refseq_anot)
-sink()
+write.table(NB.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 
-# View the distance to the nearest Transcription Start Site; the target.row column in the output indicates the row number in the initial target set
-dist_tss <- getAssociationWithTSS(Diff1.25p.hyper.anot)
-head(dist_tss)
+save(NB.Diff.25p.hyper, NB.Diff.25p.hyper, NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1diffmeth.RData")
 
-# See whether the differentially methylated CpGs are within promoters,introns or exons; the order is the same as the target set
-getMembers(Diff1.25p.hyper.anot)
-
-# This can also be summarized for all differentially methylated CpGs
-plotTargetAnnotation(Diff1.25p.hyper.anot, main = "Differential Methylation Annotation")
-```
-```R
-library(methylKit)
-
-#################################################################################################################################################################
-#Read in the methylation ratio files
-week0_file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR0_E2_1/bsmap/CpG_BR0_E2_1_bsmap_ratios_filtered.txt")
-week0=methRead(week0_file.list, 
-    sample.id=list("BR0_E2_1"),
-    assembly="O_v2",
-    header=TRUE,
-    treatment=c(0),
-    mincov = 4,
-    context="CpG",
-    resolution="base",
-    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-week0
-head(week0[[1]])
-getMethylationStats(week0[[1]], plot=TRUE, both.strands=FALSE)
-
-#Normalisation and filtering
-week0.filt <- filterByCoverage(week0,
-                      lo.count=4,
-                      lo.perc=NULL,
-                      hi.count=NULL,
-                      hi.perc=99.9)
-
-week0.filt.norm <- normalizeCoverage(week0.filt, method = "median")
-week0.meth <- unite(week0.filt.norm, destrand=FALSE)
-week0.meth
-# get percent methylation matrix
-pm=percMethylation(week0.meth)
-# calculate standard deviation of CpGs
-sds=matrixStats::rowSds(pm)
-# Visualize the distribution of the per-CpG standard deviation
-# to determine a suitable cutoff
-png("histogram.png", width = 800, height = 600, units = "px", res = 300)
-hist(sds, breaks = 100)
-dev.off()
-# keep only CpG with standard deviations larger than 2%
-week0.meth <- week0.meth[sds > 2]
-# This leaves us with this number of CpG sites
-nrow(week0.meth)
-
-#Plot data structure
-png("correlation.png", width = 800, height = 600, units = "px", res = 300)
-getCorrelation(week0.meth,plot=TRUE)
-dev.off()
-png("dendogram.png", width = 800, height = 600, units = "px", res = 300)
-clusterSamples(week0.meth, dist="correlation", method="ward", plot=TRUE)
-dev.off()
-png("PCA.png", width = 800, height = 600, units = "px", res = 300)
-PCASamples(week0.meth)
-dev.off()
-
-#################################################################################################################################################################
-#Read in the methylation ratio files
-week1_file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bsmap/CpG_BR1_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bsmap/CpG_BR1_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bsmap/CpG_BR1_E2_3_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_1/bsmap/CpG_NB1_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_2/bsmap/CpG_NB1_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_3/bsmap/CpG_NB1_E2_3_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_1/bsmap/CpG_AT1_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_2/bsmap/CpG_AT1_E2_2_bsmap_ratios_filtered.txt")
-week1=methRead(week1_file.list, 
-    sample.id=list("BR1_E2_1","BR1_E2_2","BR1_E2_3","NB1_E2_1","NB1_E2_2","NB1_E2_3","AT1_E2_1","AT1_E2_2"),
-    assembly="O_v2",
-    header=TRUE,
-    treatment=c(0,0,0,1,1,1,2,2),
-    mincov = 4,
-    context="CpG",
-    resolution="base",
-    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-week1
-head(week1[[1]])
-getMethylationStats(week1[[1]], plot=TRUE, both.strands=FALSE)
-
-#Normalisation and filtering
-week1.filt <- filterByCoverage(week1,
-                      lo.count=4,
-                      lo.perc=NULL,
-                      hi.count=NULL,
-                      hi.perc=99.9)
-
-week1.filt.norm <- normalizeCoverage(week1.filt, method = "median")
-week1.meth <- unite(week1.filt.norm, destrand=FALSE)
-week1.meth
-# get percent methylation matrix
-pm=percMethylation(week1.meth)
-# calculate standard deviation of CpGs
-sds=matrixStats::rowSds(pm)
-# Visualize the distribution of the per-CpG standard deviation
-# to determine a suitable cutoff
-png("histogram1.png", res = 1080)
-hist(sds, breaks = 100)
-dev.off()
-# keep only CpG with standard deviations larger than 2%
-week1.meth <- week1.meth[sds > 2]
-# This leaves us with this number of CpG sites
-nrow(week1.meth)
-
-#Plot data structure
-png("correlation1.png", res = 1080)
-getCorrelation(week1.meth,plot=TRUE)
-dev.off()
-cat("bump")
-png("dendogram1.png", res = 1080)
-clusterSamples(week1.meth, dist="correlation", method="ward", plot=TRUE)
-dev.off()
-png("PCA1.png", res = 1080)
-PCASamples(week1.meth)
-dev.off()
+#################################################################################################################################
 
 #Identify differential methylation
-Diff1 <- calculateDiffMeth(week1.meth,
-                            treatment=c(0,0,0,1,1,1,2,2,2),
+AT.Diff <- calculateDiffMeth(AT.week1.meth,
+                            treatment=c(0,0,0,1,1),
                             overdispersion = "MN",
                             adjust="BH")
-Diff1
-png("Volcano1.png", res = 1080)
-plot(Diff1$meth.diff, -log10(Diff1$qvalue))
-abline(v=0)
+AT.Diff
+save(AT.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Volcano.png")
+#plot(AT.Diff$meth.diff, -log10(AT.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_diffmethperchr.png")
+diffMethPerChr(AT.Diff) 
 dev.off()
 
-diffMethPerChr(Diff1)
-
 # get hyper methylated bases and order by qvalue
-Diff1.25p.hyper <- getMethylDiff(Diff1,
+AT.Diff.25p.hyper <- getMethylDiff(AT.Diff,
                               difference=25,
                               qvalue=0.01,
                               type="hyper")
-Diff1.25p.hyper <- Diff1.25p.hyper[order(Diff1.25p.hyper$qvalue),]
+AT.Diff.25p.hyper <- AT.Diff.25p.hyper[order(AT.Diff.25p.hyper$qvalue), ]
 
 # get hypo methylated bases and order by qvalue
-Diff1.25p.hypo <- getMethylDiff(Diff1,
+AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
                              difference=25,
                              qvalue=0.01,
                              type="hypo")
-Diff1.25p.hypo <- Diff1.25p.hypo[order(Diff1.25p.hypo$qvalue),]
+AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
 
 # get all differentially methylated bases and order by qvalue
-Diff1.25p <- getMethylDiff(Diff1,
+AT.Diff.25p <- getMethylDiff(AT.Diff,
                         difference=25,
                         qvalue=0.01)
-Diff1.25p <- Diff25.25p[order(Diff1.25p$qvalue),]
+AT.Diff.25p <- AT.Diff.25p[order(AT.Diff.25p$qvalue), ]
 
-#Annotate CpGs in genic regions
-refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed")
-#Annotate hypermethylated CpGs ("target") with promoter/exon/intron
-sink("Diff1p.hyper.anot.txt")
-Diff1.25p.hyper.anot <- annotateWithGeneParts(target = as(Diff1p.hyper,"GRanges"),
-                                       feature = refseq_anot)
-sink()
+write.table(AT.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 
-# View the distance to the nearest Transcription Start Site; the target.row column in the output indicates the row number in the initial target set
-dist_tss <- getAssociationWithTSS(Diff1.25p.hyper.anot)
-head(dist_tss)
-
-# See whether the differentially methylated CpGs are within promoters,introns or exons; the order is the same as the target set
-getMembers(Diff1.25p.hyper.anot)
-
-# This can also be summarized for all differentially methylated CpGs
-plotTargetAnnotation(Diff1.25p.hyper.anot, main = "Differential Methylation Annotation")
-#################################################################################################################################################################
+save(AT.Diff.25p.hyper, AT.Diff.25p.hyper, AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1diffmeth.RData")
+```
+Differential methylation between week 3 samples:
+```R
+library(methylKit)
 #Read in the methylation ratio files
-week3_file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_1/bsmap/CpG_BR3_E2_1_bsmap_ratios_filtered.txt",
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_1/bsmap/CpG_BR3_E2_1_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_2/bsmap/CpG_BR3_E2_2_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_3/bsmap/CpG_BR3_E2_3_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_1/bsmap/CpG_NB3_E2_1_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_2/bsmap/CpG_NB3_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_3/bsmap/CpG_NB3_E2_3_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_1/bsmap/CpG_AT3_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_2/bsmap/CpG_AT3_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_3/bsmap/CpG_AT3_E2_3_bsmap_ratios_filtered.txt")
-week3=methRead(week3_file.list, 
-    sample.id=list("BR3_E2_1","BR3_E2_2","BR3_E2_3","NB3_E2_1","NB3_E2_2","NB3_E2_3","AT3_E2_1","AT3_E2_2","AT3_E2_3"),
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_3/bsmap/CpG_NB3_E2_3_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR3_E2_1","BR3_E2_2","BR3_E2_3","NB3_E2_1","NB3_E2_2","NB3_E2_3"),
     assembly="O_v2",
     header=TRUE,
-    treatment=c(0,0,0,1,1,1,2,2,2),
+    treatment=c(0,0,0,1,1,1),
     mincov = 4,
     context="CpG",
     resolution="base",
     pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-week3
-head(week3[[1]])
-getMethylationStats(week3[[1]], plot=TRUE, both.strands=FALSE)
+NB.week1
+head(NB.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR3_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[1]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR3_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[2]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR3_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[3]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[6]], plot=TRUE, both.strands=FALSE)
+dev.off()
 
 #Normalisation and filtering
-week3.filt <- filterByCoverage(week3,
+NB.week1.filt <- filterByCoverage(NB.week1,
                       lo.count=4,
                       lo.perc=NULL,
                       hi.count=NULL,
                       hi.perc=99.9)
 
-week3.filt.norm <- normalizeCoverage(week3.filt, method = "median")
-week3.meth <- unite(week3.filt.norm, destrand=FALSE)
-week3.meth
+NB.week1.filt.norm <- normalizeCoverage(NB.week1.filt, method = "median")
+NB.week1.meth <- unite(NB.week1.filt.norm, destrand=FALSE)
+NB.week1.meth
 # get percent methylation matrix
-pm=percMethylation(week3.meth)
+NB.pm=percMethylation(NB.week1.meth)
 # calculate standard deviation of CpGs
-sds=matrixStats::rowSds(pm)
+NB.sds=matrixStats::rowSds(NB.pm)
 # Visualize the distribution of the per-CpG standard deviation
 # to determine a suitable cutoff
-png("histogram3.png", width = 800, height = 600, units = "px", res = 300)
-hist(sds, breaks = 100)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_sdshistogram.png")
+hist(NB.sds, breaks = 100)
 dev.off()
 # keep only CpG with standard deviations larger than 2%
-week3.meth <- week3.meth[sds > 2]
+NB.week1.meth <- NB.week1.meth[NB.sds > 2]
 # This leaves us with this number of CpG sites
-nrow(week3.meth)
+nrow(NB.week1.meth)
 
 #Plot data structure
-png("correlation3.png", width = 800, height = 600, units = "px", res = 300)
-getCorrelation(week3.meth,plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_correlation.png")
+getCorrelation(NB.week1.meth,plot=TRUE)
 dev.off()
-png("dendogram3.png", width = 800, height = 600, units = "px", res = 300)
-clusterSamples(week3.meth, dist="correlation", method="ward", plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_dendogram.png")
+clusterSamples(NB.week1.meth, dist="correlation", method="ward", plot=TRUE)
 dev.off()
-png("PCA3.png", width = 800, height = 600, units = "px", res = 300)
-PCASamples(week3.meth)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_PCA.png")
+PCASamples(NB.week1.meth)
 dev.off()
 
-#################################################################################################################################################################
+save(NB.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3meth.RData")
+
+#################################################################################################################################
 #Read in the methylation ratio files
-week6_file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bsmap/CpG_BR6_E2_1_bsmap_ratios_filtered.txt",
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_1/bsmap/CpG_BR3_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_2/bsmap/CpG_BR3_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_3/bsmap/CpG_BR3_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_1/bsmap/CpG_AT3_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_2/bsmap/CpG_AT3_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_3/bsmap/CpG_AT3_E2_3_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR3_E2_1","BR3_E2_2","BR3_E2_3","AT3_E2_1","AT3_E2_2","AT3_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+head(AT.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_E2_1_CpGhistogram.png")
+getMethylationStats(AT.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_E2_2_CpGhistogram.png")
+getMethylationStats(AT.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_E2_3_CpGhistogram.png")
+getMethylationStats(AT.week1[[6]], plot=TRUE, both.strands=FALSE)
+dev.off()
+
+#Normalisation and filtering
+AT.week1.filt <- filterByCoverage(AT.week1,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+
+AT.week1.filt.norm <- normalizeCoverage(AT.week1.filt, method = "median")
+AT.week1.meth <- unite(AT.week1.filt.norm, destrand=FALSE)
+AT.week1.meth
+# get percent methylation matrix
+AT.pm=percMethylation(AT.week1.meth)
+# calculate standard deviation of CpGs
+AT.sds=matrixStats::rowSds(AT.pm)
+# Visualize the distribution of the per-CpG standard deviation
+# to determine a suitable cutoff
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_sdshistogram.png")
+hist(AT.sds, breaks = 100)
+dev.off()
+# keep only CpG with standard deviations larger than 2%
+AT.week1.meth <- AT.week1.meth[AT.sds > 2]
+# This leaves us with this number of CpG sites
+nrow(AT.week1.meth)
+
+#Plot data structure
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_correlation.png")
+getCorrelation(AT.week1.meth,plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_dendogram.png")
+clusterSamples(AT.week1.meth, dist="correlation", method="ward", plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_PCA.png")
+PCASamples(AT.week1.meth)
+dev.off()
+
+save(AT.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3meth.RData")
+
+#################################################################################################################################
+
+#Identify differential methylation
+NB.Diff <- calculateDiffMeth(NB.week1.meth,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+NB.Diff
+save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Volcano.png")
+#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_diffmethperchr.png")
+diffMethPerChr(NB.Diff) 
+dev.off()
+
+# get hyper methylated bases and order by qvalue
+NB.Diff.25p.hyper <- getMethylDiff(NB.Diff,
+                              difference=25,
+                              qvalue=0.01,
+                              type="hyper")
+NB.Diff.25p.hyper <- NB.Diff.25p.hyper[order(NB.Diff.25p.hyper$qvalue), ]
+
+# get hypo methylated bases and order by qvalue
+NB.Diff.25p.hypo <- getMethylDiff(NB.Diff,
+                             difference=25,
+                             qvalue=0.01,
+                             type="hypo")
+NB.Diff.25p.hypo <- NB.Diff.25p.hypo[order(NB.Diff.25p.hypo$qvalue), ]
+
+# get all differentially methylated bases and order by qvalue
+NB.Diff.25p <- getMethylDiff(NB.Diff,
+                        difference=25,
+                        qvalue=0.01)
+NB.Diff.25p <- NB.Diff.25p[order(NB.Diff.25p$qvalue), ]
+
+write.table(NB.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+save(NB.Diff.25p.hyper, NB.Diff.25p.hyper, NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3diffmeth.RData")
+
+#################################################################################################################################
+
+#Identify differential methylation
+AT.Diff <- calculateDiffMeth(AT.week1.meth,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.Diff
+save(AT.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Volcano.png")
+#plot(AT.Diff$meth.diff, -log10(AT.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_diffmethperchr.png")
+diffMethPerChr(AT.Diff) 
+dev.off()
+
+# get hyper methylated bases and order by qvalue
+AT.Diff.25p.hyper <- getMethylDiff(AT.Diff,
+                              difference=25,
+                              qvalue=0.01,
+                              type="hyper")
+AT.Diff.25p.hyper <- AT.Diff.25p.hyper[order(AT.Diff.25p.hyper$qvalue), ]
+
+# get hypo methylated bases and order by qvalue
+AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
+                             difference=25,
+                             qvalue=0.01,
+                             type="hypo")
+AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
+
+# get all differentially methylated bases and order by qvalue
+AT.Diff.25p <- getMethylDiff(AT.Diff,
+                        difference=25,
+                        qvalue=0.01)
+AT.Diff.25p <- AT.Diff.25p[order(AT.Diff.25p$qvalue), ]
+
+write.table(AT.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+save(AT.Diff.25p.hyper, AT.Diff.25p.hyper, AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3diffmeth.RData")
+```
+Differential methylation between week 6 samples:
+```R
+library(methylKit)
+#Read in the methylation ratio files
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bsmap/CpG_BR6_E2_1_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_2/bsmap/CpG_BR6_E2_2_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_3/bsmap/CpG_BR6_E2_3_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_1/bsmap/CpG_NB6_E2_1_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_2/bsmap/CpG_NB6_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_3/bsmap/CpG_NB6_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_3/bsmap/CpG_NB6_E2_3_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR6_E2_1","BR6_E2_2","BR6_E2_3","NB6_E2_1","NB6_E2_2","NB6_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+NB.week1
+head(NB.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR6_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[1]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR6_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[2]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR6_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[3]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[6]], plot=TRUE, both.strands=FALSE)
+dev.off()
+
+#Normalisation and filtering
+NB.week1.filt <- filterByCoverage(NB.week1,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+
+NB.week1.filt.norm <- normalizeCoverage(NB.week1.filt, method = "median")
+NB.week1.meth <- unite(NB.week1.filt.norm, destrand=FALSE)
+NB.week1.meth
+# get percent methylation matrix
+NB.pm=percMethylation(NB.week1.meth)
+# calculate standard deviation of CpGs
+NB.sds=matrixStats::rowSds(NB.pm)
+# Visualize the distribution of the per-CpG standard deviation
+# to determine a suitable cutoff
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_sdshistogram.png")
+hist(NB.sds, breaks = 100)
+dev.off()
+# keep only CpG with standard deviations larger than 2%
+NB.week1.meth <- NB.week1.meth[NB.sds > 2]
+# This leaves us with this number of CpG sites
+nrow(NB.week1.meth)
+
+#Plot data structure
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_correlation.png")
+getCorrelation(NB.week1.meth,plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_dendogram.png")
+clusterSamples(NB.week1.meth, dist="correlation", method="ward", plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_PCA.png")
+PCASamples(NB.week1.meth)
+dev.off()
+
+save(NB.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6meth.RData")
+
+#################################################################################################################################
+#Read in the methylation ratio files
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bsmap/CpG_BR6_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_2/bsmap/CpG_BR6_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_3/bsmap/CpG_BR6_E2_3_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_1/bsmap/CpG_AT6_E2_1_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_2/bsmap/CpG_AT6_E2_2_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_3/bsmap/CpG_AT6_E2_3_bsmap_ratios_filtered.txt")
-week6=methRead(week6_file.list, 
-    sample.id=list("BR6_E2_1","BR6_E2_2","BR6_E2_3","NB6_E2_1","NB6_E2_2","NB6_E2_3","AT6_E2_1","AT6_E2_2","AT6_E2_3"),
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR6_E2_1","BR6_E2_2","BR6_E2_3","AT6_E2_1","AT6_E2_2","AT6_E2_3"),
     assembly="O_v2",
     header=TRUE,
-    treatment=c(0,0,0,1,1,1,2,2,2),
+    treatment=c(0,0,0,1,1,1),
     mincov = 4,
     context="CpG",
     resolution="base",
     pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-week6
-head(week6[[1]])
-getMethylationStats(week6[[1]], plot=TRUE, both.strands=FALSE)
+AT.week1
+head(AT.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_E2_1_CpGhistogram.png")
+getMethylationStats(AT.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_E2_2_CpGhistogram.png")
+getMethylationStats(AT.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_E2_3_CpGhistogram.png")
+getMethylationStats(AT.week1[[6]], plot=TRUE, both.strands=FALSE)
+dev.off()
 
 #Normalisation and filtering
-week6.filt <- filterByCoverage(week6,
+AT.week1.filt <- filterByCoverage(AT.week1,
                       lo.count=4,
                       lo.perc=NULL,
                       hi.count=NULL,
                       hi.perc=99.9)
 
-week6.filt.norm <- normalizeCoverage(week6.filt, method = "median")
-week6.meth <- unite(week6.filt.norm, destrand=FALSE)
-week6.meth
+AT.week1.filt.norm <- normalizeCoverage(AT.week1.filt, method = "median")
+AT.week1.meth <- unite(AT.week1.filt.norm, destrand=FALSE)
+AT.week1.meth
 # get percent methylation matrix
-pm=percMethylation(week6.meth)
+AT.pm=percMethylation(AT.week1.meth)
 # calculate standard deviation of CpGs
-sds=matrixStats::rowSds(pm)
+AT.sds=matrixStats::rowSds(AT.pm)
 # Visualize the distribution of the per-CpG standard deviation
 # to determine a suitable cutoff
-png("histogram6.png", width = 800, height = 600, units = "px", res = 300)
-hist(sds, breaks = 100)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_sdshistogram.png")
+hist(AT.sds, breaks = 100)
 dev.off()
 # keep only CpG with standard deviations larger than 2%
-week6.meth <- week6.meth[sds > 2]
+AT.week1.meth <- AT.week1.meth[AT.sds > 2]
 # This leaves us with this number of CpG sites
-nrow(week6.meth)
+nrow(AT.week1.meth)
 
 #Plot data structure
-png("correlation6.png", width = 800, height = 600, units = "px", res = 300)
-getCorrelation(week6.meth,plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_correlation.png")
+getCorrelation(AT.week1.meth,plot=TRUE)
 dev.off()
-png("dendogram6.png", width = 800, height = 600, units = "px", res = 300)
-clusterSamples(week6.meth, dist="correlation", method="ward", plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_dendogram.png")
+clusterSamples(AT.week1.meth, dist="correlation", method="ward", plot=TRUE)
 dev.off()
-png("PCA6.png", width = 800, height = 600, units = "px", res = 300)
-PCASamples(week6.meth)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_PCA.png")
+PCASamples(AT.week1.meth)
 dev.off()
 
-#################################################################################################################################################################
+save(AT.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6meth.RData")
+
+#################################################################################################################################
+
+#Identify differential methylation
+NB.Diff <- calculateDiffMeth(NB.week1.meth,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+NB.Diff
+save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_Volcano.png")
+#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_diffmethperchr.png")
+diffMethPerChr(NB.Diff) 
+dev.off()
+
+# get hyper methylated bases and order by qvalue
+NB.Diff.25p.hyper <- getMethylDiff(NB.Diff,
+                              difference=25,
+                              qvalue=0.01,
+                              type="hyper")
+NB.Diff.25p.hyper <- NB.Diff.25p.hyper[order(NB.Diff.25p.hyper$qvalue), ]
+
+# get hypo methylated bases and order by qvalue
+NB.Diff.25p.hypo <- getMethylDiff(NB.Diff,
+                             difference=25,
+                             qvalue=0.01,
+                             type="hypo")
+NB.Diff.25p.hypo <- NB.Diff.25p.hypo[order(NB.Diff.25p.hypo$qvalue), ]
+
+# get all differentially methylated bases and order by qvalue
+NB.Diff.25p <- getMethylDiff(NB.Diff,
+                        difference=25,
+                        qvalue=0.01)
+NB.Diff.25p <- NB.Diff.25p[order(NB.Diff.25p$qvalue), ]
+
+write.table(NB.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+save(NB.Diff.25p.hyper, NB.Diff.25p.hyper, NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6diffmeth.RData")
+
+#################################################################################################################################
+
+#Identify differential methylation
+AT.Diff <- calculateDiffMeth(AT.week1.meth,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.Diff
+save(AT.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_Volcano.png")
+#plot(AT.Diff$meth.diff, -log10(AT.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_diffmethperchr.png")
+diffMethPerChr(AT.Diff) 
+dev.off()
+
+# get hyper methylated bases and order by qvalue
+AT.Diff.25p.hyper <- getMethylDiff(AT.Diff,
+                              difference=25,
+                              qvalue=0.01,
+                              type="hyper")
+AT.Diff.25p.hyper <- AT.Diff.25p.hyper[order(AT.Diff.25p.hyper$qvalue), ]
+
+# get hypo methylated bases and order by qvalue
+AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
+                             difference=25,
+                             qvalue=0.01,
+                             type="hypo")
+AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
+
+# get all differentially methylated bases and order by qvalue
+AT.Diff.25p <- getMethylDiff(AT.Diff,
+                        difference=25,
+                        qvalue=0.01)
+AT.Diff.25p <- AT.Diff.25p[order(AT.Diff.25p$qvalue), ]
+
+write.table(AT.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+save(AT.Diff.25p.hyper, AT.Diff.25p.hyper, AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6diffmeth.RData")
+```
+Differential methylation between week 9 samples:
+```R
+library(methylKit)
 #Read in the methylation ratio files
-week9_file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_1/bsmap/CpG_BR9_E2_1_bsmap_ratios_filtered.txt",
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_1/bsmap/CpG_BR9_E2_1_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_2/bsmap/CpG_BR9_E2_2_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_3/bsmap/CpG_BR9_E2_3_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_1/bsmap/CpG_NB9_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_2/bsmap/CpG_NB9_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_1/bsmap/CpG_AT9_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_2/bsmap/CpG_AT9_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_3/bsmap/CpG_AT9_E2_3_bsmap_ratios_filtered.txt")
-week9=methRead(week9_file.list, 
-    sample.id=list("BR9_E2_1","BR9_E2_2","BR9_E2_3","NB9_E2_1","NB9_E2_2","AT9_E2_1","AT9_E2_2","AT9_E2_3"),
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_2/bsmap/CpG_NB9_E2_2_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR9_E2_1","BR9_E2_2","BR9_E2_3","NB9_E2_1","NB9_E2_2"),
     assembly="O_v2",
     header=TRUE,
-    treatment=c(0,0,0,1,1,2,2,2),
+    treatment=c(0,0,0,1,1),
     mincov = 4,
     context="CpG",
     resolution="base",
     pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-week9
-head(week9[[1]])
-getMethylationStats(week9[[1]], plot=TRUE, both.strands=FALSE)
+NB.week1
+head(NB.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR9_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[1]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR9_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[2]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR9_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[3]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
 
 #Normalisation and filtering
-week9.filt <- filterByCoverage(week9,
+NB.week1.filt <- filterByCoverage(NB.week1,
                       lo.count=4,
                       lo.perc=NULL,
                       hi.count=NULL,
                       hi.perc=99.9)
 
-week9.filt.norm <- normalizeCoverage(week9.filt, method = "median")
-week9.meth <- unite(week9.filt.norm, destrand=FALSE)
-week9.meth
+NB.week1.filt.norm <- normalizeCoverage(NB.week1.filt, method = "median")
+NB.week1.meth <- unite(NB.week1.filt.norm, destrand=FALSE)
+NB.week1.meth
 # get percent methylation matrix
-pm=percMethylation(week9.meth)
+NB.pm=percMethylation(NB.week1.meth)
 # calculate standard deviation of CpGs
-sds=matrixStats::rowSds(pm)
+NB.sds=matrixStats::rowSds(NB.pm)
 # Visualize the distribution of the per-CpG standard deviation
 # to determine a suitable cutoff
-png("histogram9.png", width = 800, height = 600, units = "px", res = 300)
-hist(sds, breaks = 100)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_sdshistogram.png")
+hist(NB.sds, breaks = 100)
 dev.off()
 # keep only CpG with standard deviations larger than 2%
-week9.meth <- week9.meth[sds > 2]
+NB.week1.meth <- NB.week1.meth[NB.sds > 2]
 # This leaves us with this number of CpG sites
-nrow(week9.meth)
+nrow(NB.week1.meth)
 
 #Plot data structure
-png("correlation9.png", width = 800, height = 600, units = "px", res = 300)
-getCorrelation(week9.meth,plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_correlation.png")
+getCorrelation(NB.week1.meth,plot=TRUE)
 dev.off()
-png("dendogram9.png", width = 800, height = 600, units = "px", res = 300)
-clusterSamples(week9.meth, dist="correlation", method="ward", plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_dendogram.png")
+clusterSamples(NB.week1.meth, dist="correlation", method="ward", plot=TRUE)
 dev.off()
-png("PCA9.png", width = 800, height = 600, units = "px", res = 300)
-PCASamples(week9.meth)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_PCA.png")
+PCASamples(NB.week1.meth)
 dev.off()
 
-#################################################################################################################################################################
+save(NB.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9meth.RData")
+
+#################################################################################################################################
 #Read in the methylation ratio files
-week25_file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_1/bsmap/CpG_BR25_E2_1_bsmap_ratios_filtered.txt",
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_1/bsmap/CpG_BR9_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_2/bsmap/CpG_BR9_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_3/bsmap/CpG_BR9_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_1/bsmap/CpG_AT9_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_2/bsmap/CpG_AT9_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_3/bsmap/CpG_AT9_E2_3_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR9_E2_1","BR9_E2_2","BR9_E2_3","AT9_E2_1","AT9_E2_2","AT9_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+head(AT.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_E2_1_CpGhistogram.png")
+getMethylationStats(AT.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_E2_2_CpGhistogram.png")
+getMethylationStats(AT.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_E2_3_CpGhistogram.png")
+getMethylationStats(AT.week1[[6]], plot=TRUE, both.strands=FALSE)
+dev.off()
+
+#Normalisation and filtering
+AT.week1.filt <- filterByCoverage(AT.week1,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+
+AT.week1.filt.norm <- normalizeCoverage(AT.week1.filt, method = "median")
+AT.week1.meth <- unite(AT.week1.filt.norm, destrand=FALSE)
+AT.week1.meth
+# get percent methylation matrix
+AT.pm=percMethylation(AT.week1.meth)
+# calculate standard deviation of CpGs
+AT.sds=matrixStats::rowSds(AT.pm)
+# Visualize the distribution of the per-CpG standard deviation
+# to determine a suitable cutoff
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_sdshistogram.png")
+hist(AT.sds, breaks = 100)
+dev.off()
+# keep only CpG with standard deviations larger than 2%
+AT.week1.meth <- AT.week1.meth[AT.sds > 2]
+# This leaves us with this number of CpG sites
+nrow(AT.week1.meth)
+
+#Plot data structure
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_correlation.png")
+getCorrelation(AT.week1.meth,plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_dendogram.png")
+clusterSamples(AT.week1.meth, dist="correlation", method="ward", plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_PCA.png")
+PCASamples(AT.week1.meth)
+dev.off()
+
+save(AT.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9meth.RData")
+
+#################################################################################################################################
+
+#Identify differential methylation
+NB.Diff <- calculateDiffMeth(NB.week1.meth,
+                            treatment=c(0,0,0,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+NB.Diff
+save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_Volcano.png")
+#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_diffmethperchr.png")
+diffMethPerChr(NB.Diff) 
+dev.off()
+
+# get hyper methylated bases and order by qvalue
+NB.Diff.25p.hyper <- getMethylDiff(NB.Diff,
+                              difference=25,
+                              qvalue=0.01,
+                              type="hyper")
+NB.Diff.25p.hyper <- NB.Diff.25p.hyper[order(NB.Diff.25p.hyper$qvalue), ]
+
+# get hypo methylated bases and order by qvalue
+NB.Diff.25p.hypo <- getMethylDiff(NB.Diff,
+                             difference=25,
+                             qvalue=0.01,
+                             type="hypo")
+NB.Diff.25p.hypo <- NB.Diff.25p.hypo[order(NB.Diff.25p.hypo$qvalue), ]
+
+# get all differentially methylated bases and order by qvalue
+NB.Diff.25p <- getMethylDiff(NB.Diff,
+                        difference=25,
+                        qvalue=0.01)
+NB.Diff.25p <- NB.Diff.25p[order(NB.Diff.25p$qvalue), ]
+
+write.table(NB.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+save(NB.Diff.25p.hyper, NB.Diff.25p.hyper, NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9diffmeth.RData")
+
+#################################################################################################################################
+
+#Identify differential methylation
+AT.Diff <- calculateDiffMeth(AT.week1.meth,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.Diff
+save(AT.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_Volcano.png")
+#plot(AT.Diff$meth.diff, -log10(AT.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_diffmethperchr.png")
+diffMethPerChr(AT.Diff) 
+dev.off()
+
+# get hyper methylated bases and order by qvalue
+AT.Diff.25p.hyper <- getMethylDiff(AT.Diff,
+                              difference=25,
+                              qvalue=0.01,
+                              type="hyper")
+AT.Diff.25p.hyper <- AT.Diff.25p.hyper[order(AT.Diff.25p.hyper$qvalue), ]
+
+# get hypo methylated bases and order by qvalue
+AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
+                             difference=25,
+                             qvalue=0.01,
+                             type="hypo")
+AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
+
+# get all differentially methylated bases and order by qvalue
+AT.Diff.25p <- getMethylDiff(AT.Diff,
+                        difference=25,
+                        qvalue=0.01)
+AT.Diff.25p <- AT.Diff.25p[order(AT.Diff.25p$qvalue), ]
+
+write.table(AT.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+save(AT.Diff.25p.hyper, AT.Diff.25p.hyper, AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9diffmeth.RData")
+```
+Differential methylation between week 25 samples:
+```R
+library(methylKit)
+#Read in the methylation ratio files
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_1/bsmap/CpG_BR25_E2_1_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_2/bsmap/CpG_BR25_E2_2_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_3/bsmap/CpG_BR25_E2_3_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_1/bsmap/CpG_NB25_E2_1_bsmap_ratios_filtered.txt",
 "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_2/bsmap/CpG_NB25_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_3/bsmap/CpG_NB25_E2_3_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_1/bsmap/CpG_AT25_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_2/bsmap/CpG_AT25_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_3/bsmap/CpG_AT25_E2_3_bsmap_ratios_filtered.txt")
-week25=methRead(week25_file.list, 
-    sample.id=list("BR25_E2_1","BR25_E2_2","BR25_E2_3","NB25_E2_1","NB25_E2_2","NB25_E2_3","AT25_E2_1","AT25_E2_2","AT25_E2_3"),
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_3/bsmap/CpG_NB25_E2_3_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR25_E2_1","BR25_E2_2","BR25_E2_3","NB25_E2_1","NB25_E2_2","NB25_E2_3"),
     assembly="O_v2",
     header=TRUE,
-    treatment=c(0,0,0,1,1,1,2,2,2),
+    treatment=c(0,0,0,1,1,1),
     mincov = 4,
     context="CpG",
     resolution="base",
     pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-week25
-head(week25[[1]])
-getMethylationStats(week25[[1]], plot=TRUE, both.strands=FALSE)
+NB.week1
+head(NB.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR25_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[1]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR25_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[2]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/BR25_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[3]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_E2_1_CpGhistogram.png")
+getMethylationStats(NB.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_E2_2_CpGhistogram.png")
+getMethylationStats(NB.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_E2_3_CpGhistogram.png")
+getMethylationStats(NB.week1[[6]], plot=TRUE, both.strands=FALSE)
+dev.off()
 
 #Normalisation and filtering
-week25.filt <- filterByCoverage(week25,
+NB.week1.filt <- filterByCoverage(NB.week1,
                       lo.count=4,
                       lo.perc=NULL,
                       hi.count=NULL,
                       hi.perc=99.9)
 
-week25.filt.norm <- normalizeCoverage(week25.filt, method = "median")
-week25.meth <- unite(week25.filt.norm, destrand=FALSE)
-week25.meth
+NB.week1.filt.norm <- normalizeCoverage(NB.week1.filt, method = "median")
+NB.week1.meth <- unite(NB.week1.filt.norm, destrand=FALSE)
+NB.week1.meth
 # get percent methylation matrix
-pm=percMethylation(week25.meth)
+NB.pm=percMethylation(NB.week1.meth)
 # calculate standard deviation of CpGs
-sds=matrixStats::rowSds(pm)
+NB.sds=matrixStats::rowSds(NB.pm)
 # Visualize the distribution of the per-CpG standard deviation
 # to determine a suitable cutoff
-png("histogram25.png", width = 800, height = 600, units = "px", res = 300)
-hist(sds, breaks = 100)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_sdshistogram.png")
+hist(NB.sds, breaks = 100)
 dev.off()
 # keep only CpG with standard deviations larger than 2%
-week25.meth <- week25.meth[sds > 2]
+NB.week1.meth <- NB.week1.meth[NB.sds > 2]
 # This leaves us with this number of CpG sites
-nrow(week25.meth)
+nrow(NB.week1.meth)
 
 #Plot data structure
-png("correlation25.png", width = 800, height = 600, units = "px", res = 300)
-getCorrelation(week25.meth,plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_correlation.png")
+getCorrelation(NB.week1.meth,plot=TRUE)
 dev.off()
-png("dendogram25.png", width = 800, height = 600, units = "px", res = 300)
-clusterSamples(week25.meth, dist="correlation", method="ward", plot=TRUE)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_dendogram.png")
+clusterSamples(NB.week1.meth, dist="correlation", method="ward", plot=TRUE)
 dev.off()
-png("PCA25.png", width = 800, height = 600, units = "px", res = 300)
-PCASamples(week25.meth)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_PCA.png")
+PCASamples(NB.week1.meth)
 dev.off()
+
+save(NB.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25meth.RData")
+
+#################################################################################################################################
+#Read in the methylation ratio files
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_1/bsmap/CpG_BR25_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_2/bsmap/CpG_BR25_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_3/bsmap/CpG_BR25_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_1/bsmap/CpG_AT25_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_2/bsmap/CpG_AT25_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_3/bsmap/CpG_AT25_E2_3_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR25_E2_1","BR25_E2_2","BR25_E2_3","AT25_E2_1","AT25_E2_2","AT25_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+head(AT.week1[[1]])
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_E2_1_CpGhistogram.png")
+getMethylationStats(AT.week1[[4]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_E2_2_CpGhistogram.png")
+getMethylationStats(AT.week1[[5]], plot=TRUE, both.strands=FALSE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_E2_3_CpGhistogram.png")
+getMethylationStats(AT.week1[[6]], plot=TRUE, both.strands=FALSE)
+dev.off()
+
+#Normalisation and filtering
+AT.week1.filt <- filterByCoverage(AT.week1,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+
+AT.week1.filt.norm <- normalizeCoverage(AT.week1.filt, method = "median")
+AT.week1.meth <- unite(AT.week1.filt.norm, destrand=FALSE)
+AT.week1.meth
+# get percent methylation matrix
+AT.pm=percMethylation(AT.week1.meth)
+# calculate standard deviation of CpGs
+AT.sds=matrixStats::rowSds(AT.pm)
+# Visualize the distribution of the per-CpG standard deviation
+# to determine a suitable cutoff
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_sdshistogram.png")
+hist(AT.sds, breaks = 100)
+dev.off()
+# keep only CpG with standard deviations larger than 2%
+AT.week1.meth <- AT.week1.meth[AT.sds > 2]
+# This leaves us with this number of CpG sites
+nrow(AT.week1.meth)
+
+#Plot data structure
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_correlation.png")
+getCorrelation(AT.week1.meth,plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_dendogram.png")
+clusterSamples(AT.week1.meth, dist="correlation", method="ward", plot=TRUE)
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_PCA.png")
+PCASamples(AT.week1.meth)
+dev.off()
+
+save(AT.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25meth.RData")
+
+#################################################################################################################################
 
 #Identify differential methylation
-Diff25 <- calculateDiffMeth(week25.meth,
-                            treatment=c(0,0,0,1,1,1,2,2,2),
+NB.Diff <- calculateDiffMeth(NB.week1.meth,
+                            treatment=c(0,0,0,1,1,1),
                             overdispersion = "MN",
                             adjust="BH")
-Diff25
-png("Volcano25.png", width = 800, height = 600, units = "px", res = 300)
-plot(Diff25$meth.diff, -log10(Diff25$qvalue))
-abline(v=0)
+NB.Diff
+save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Volcano.png")
+#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_diffmethperchr.png")
+diffMethPerChr(NB.Diff) 
 dev.off()
 
-diffMethPerChr(Diff25)
-
 # get hyper methylated bases and order by qvalue
-Diff25.25p.hyper <- getMethylDiff(Diff25,
+NB.Diff.25p.hyper <- getMethylDiff(NB.Diff,
                               difference=25,
                               qvalue=0.01,
                               type="hyper")
-Diff25.25p.hyper <- Diff25.25p.hyper[order(Diff25.25p.hyper$qvalue),]
+NB.Diff.25p.hyper <- NB.Diff.25p.hyper[order(NB.Diff.25p.hyper$qvalue), ]
 
 # get hypo methylated bases and order by qvalue
-Diff25.25p.hypo <- getMethylDiff(Diff25,
+NB.Diff.25p.hypo <- getMethylDiff(NB.Diff,
                              difference=25,
                              qvalue=0.01,
                              type="hypo")
-Diff25.25p.hypo <- Diff25.25p.hypo[order(Diff25.25p.hypo$qvalue),]
+NB.Diff.25p.hypo <- NB.Diff.25p.hypo[order(NB.Diff.25p.hypo$qvalue), ]
 
 # get all differentially methylated bases and order by qvalue
-Diff25.25p <- getMethylDiff(Diff25,
+NB.Diff.25p <- getMethylDiff(NB.Diff,
                         difference=25,
                         qvalue=0.01)
-Diff25.25p <- Diff25.25p[order(Diff25.25p$qvalue),]
+NB.Diff.25p <- NB.Diff.25p[order(NB.Diff.25p$qvalue), ]
 
-#Annotate CpGs in genic regions
-refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed")
-#Annotate hypermethylated CpGs ("target") with promoter/exon/intron
-sink("Diff25p.hyper.anot.txt")
-Diff25.25p.hyper.anot <- annotateWithGeneParts(target = as(Diff25p.hyper,"GRanges"),
+write.table(NB.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+save(NB.Diff.25p.hyper, NB.Diff.25p.hyper, NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25diffmeth.RData")
+
+#################################################################################################################################
+
+#Identify differential methylation
+AT.Diff <- calculateDiffMeth(AT.week1.meth,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.Diff
+save(AT.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_diffmeth.RData")
+
+#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_Volcano.png")
+#plot(AT.Diff$meth.diff, -log10(AT.Diff$qvalue))
+#abline(v=0)
+#dev.off()
+
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_diffmethperchr.png")
+diffMethPerChr(AT.Diff) 
+dev.off()
+
+# get hyper methylated bases and order by qvalue
+AT.Diff.25p.hyper <- getMethylDiff(AT.Diff,
+                              difference=25,
+                              qvalue=0.01,
+                              type="hyper")
+AT.Diff.25p.hyper <- AT.Diff.25p.hyper[order(AT.Diff.25p.hyper$qvalue), ]
+
+# get hypo methylated bases and order by qvalue
+AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
+                             difference=25,
+                             qvalue=0.01,
+                             type="hypo")
+AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
+
+# get all differentially methylated bases and order by qvalue
+AT.Diff.25p <- getMethylDiff(AT.Diff,
+                        difference=25,
+                        qvalue=0.01)
+AT.Diff.25p <- AT.Diff.25p[order(AT.Diff.25p$qvalue), ]
+
+write.table(AT.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+save(AT.Diff.25p.hyper, AT.Diff.25p.hyper, AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25diffmeth.RData")
+```
+
+#### Genomation
+
+Annotate differentially methylated sites to determine if they fall within promoter, intronic or exonic regions, or CpG islands.
+
+Collect annotation info:
+```bash
+#Create bed12 file for gene annotations
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/gtf2bed.py /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.gtf > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12 
+
+#Identify CpG islands 
+source package a684a2ed-d23f-4025-aa81-b21e27e458df
+cpgplot -sequence /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa -window 100 -minlen 200 -minoe 0.6 -minpc 50. -graph cps -cg -pc -obsexp -outfile /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpgplot -outfeat /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.gff
+awk 'BEGIN{OFS="\t"} !/^#/ {print $1, $4-1, $5, $9, ".", $7}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.gff > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed 
+
+#Create output directory for output files:
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/genomation/
+
+singularity exec --overlay /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/overlays/genomation1.34.0-overlay.sif:ro /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/genomation1.34.0.sif R
+```
+Annotate Week 1 differentially methylated sites:
+```R
+library("genomation")
+library("methylKit")
+
+#Read in data:
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1diffmeth.RData")
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1diffmeth.RData")
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
+
+#Promoter/exon/introns:
+#Annotate differentially methylated sites with promoter/exon/intron information.
+AT.Diff.25p.anot <- annotateWithGeneParts(target = as(AT.Diff.25p,"GRanges"),
                                        feature = refseq_anot)
-sink()
+NB.Diff.25p.anot <- annotateWithGeneParts(target = as(NB.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
 
-# View the distance to the nearest Transcription Start Site; the target.row column in the output indicates the row number in the initial target set
-dist_tss <- getAssociationWithTSS(Diff25.25p.hyper.anot)
-head(dist_tss)
+#Report distance to the nearest Transcription Start Site, the target.row column in the output indicates the row number in the initial target set
+AT.dist_tss <- getAssociationWithTSS(AT.Diff.25p.anot)
+head(AT.dist_tss)
 
-# See whether the differentially methylated CpGs are within promoters,introns or exons; the order is the same as the target set
-getMembers(Diff25.25p.hyper.anot)
+NB.dist_tss <- getAssociationWithTSS(NB.Diff.25p.anot)
+head(NB.dist_tss)
 
-# This can also be summarized for all differentially methylated CpGs
-plotTargetAnnotation(Diff25.25p.hyper.anot, main = "Differential Methylation Annotation")
+#Report whether the differentially methylated CpGs are within promoters,introns or exons; the order is the same as the target set
+ATpie <- getMembers(AT.Diff.25p.anot)
+NBpie <- getMembers(NB.Diff.25p.anot)
+AT.dist_tss <- cbind(AT.dist_tss, ATpie)
+NB.dist_tss <- cbind(NB.dist_tss, NBpie)
+
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_AT1.png")
+plotTargetAnnotation(AT.Diff.25p.anot, main = "Differential Methylation Annotation BR vs AT Week 1")
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_NB1.png")
+plotTargetAnnotation(NB.Diff.25p.anot, main = "Differential Methylation Annotation BR vs NB Week 1")
+dev.off()
+
+#CpG islands:
+#Load the CpG info
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+NB.diffCpGann <- annotateWithFeatureFlank(as(NB.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+AT.diffCpGann <- annotateWithFeatureFlank(as(AT.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+
+#Do CpG belong to a CpG Island or Shore
+NBissh <- getMembers(NB.diffCpGann)
+head(NBissh)
+
+ATissh <- getMembers(AT.diffCpGann)
+head(ATissh)
+
+AT.dist_tss <- cbind(AT.dist_tss, ATissh)
+NB.dist_tss <- cbind(NB.dist_tss, NBissh)
+
+write.table(NB.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB1.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT1.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_NB1.png")
+plotTargetAnnotation(NB.diffCpGann, main = "Differential Methylation Annotation NB1")
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_AT1.png")
+plotTargetAnnotation(AT.diffCpGann, main = "Differential Methylation Annotation AT1")
+dev.off()
 ```
-
-
-BSsmooth
-```bash
-mkdir -p /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/
-
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/bsseq1.38.0.sif R
-#57758169
-```
-test:
-```bash
-for file in \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bismark/BR1_E2_1_bismark.deduplicated.CpG_report.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bismark/BR1_E2_2_bismark.deduplicated.CpG_report.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bismark/BR1_E2_3_bismark.deduplicated.CpG_report.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_1/bismark/NB1_E2_1_bismark.deduplicated.CpG_report.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_3/bismark/NB1_E2_3_bismark.deduplicated.CpG_report.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_1/bismark/AT1_E2_1_bismark.deduplicated.CpG_report.txt" \
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_2/bismark/AT1_E2_2_bismark.deduplicated.CpG_report.txt"; do
-    tail -n 100000 $file > ./temp_$(basename $file)
-done
-```
+Annotate Week 3 differentially methylated sites:
 ```R
-library(bsseq)
-library(stats)
-library(BiocParallel)
+library("genomation")
+library("methylKit")
 
 #Read in data:
-col_names <- c("treatment", "replicate", "col")
-row_names <- c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3", "NB1_E2_1", "NB1_E2_2", "NB1_E2_3", "AT1_E2_1", "AT1_E2_2", "AT1_E2_3")
-data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
-df <- data.frame(data, row.names = row_names)
-colnames(df) <- col_names
-print("Input dataframe:")
-print(df)
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3diffmeth.RData")
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3diffmeth.RData")
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
 
-bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bismark/BR1_E2_1_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bismark/BR1_E2_2_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bismark/BR1_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_1/bismark/NB1_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_2/bismark/NB1_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_3/bismark/NB1_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_1/bismark/AT1_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_2/bismark/AT1_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_3/bismark/AT1_E2_3_bismark.deduplicated.CpG_report.txt"),
-    colData = df,
-    rmZeroCov = FALSE,
-    strandCollapse = TRUE,
-    verbose = TRUE)
+#Promoter/exon/introns:
+#Annotate differentially methylated sites with promoter/exon/intron information.
+AT.Diff.25p.anot <- annotateWithGeneParts(target = as(AT.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
+NB.Diff.25p.anot <- annotateWithGeneParts(target = as(NB.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
 
-sapply(assays(bsseq, withDimnames = FALSE), class)
-print("Bsseq object:")
-bsseq
-pData(bsseq)
+#Report distance to the nearest Transcription Start Site, the target.row column in the output indicates the row number in the initial target set
+AT.dist_tss <- getAssociationWithTSS(AT.Diff.25p.anot)
+head(AT.dist_tss)
 
-print("The average coverage of CpGs:")
-round(colMeans(getCoverage(bsseq)), 1)
-print("The number of CpGs:")
-length(bsseq)
-print("Number of CpGs which are covered by at least 1 read in all samples:")
-sum(rowSums(getCoverage(bsseq) >= 1) == 7)
-print("Number of CpGs with 0 coverage in all samples:")
-sum(rowSums(getCoverage(bsseq)) == 0)
+NB.dist_tss <- getAssociationWithTSS(NB.Diff.25p.anot)
+head(NB.dist_tss)
 
+#Report whether the differentially methylated CpGs are within promoters,introns or exons; the order is the same as the target set
+ATpie <- getMembers(AT.Diff.25p.anot)
+NBpie <- getMembers(NB.Diff.25p.anot)
+AT.dist_tss <- cbind(AT.dist_tss, ATpie)
+NB.dist_tss <- cbind(NB.dist_tss, NBpie)
 
-#Perform smoothing:
-#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
-
-bssmooth <- BSmooth(
-    BSseq = bsseq, 
-    ns = 70,
-    h = 1000,
-    maxGap = 10^8,
-    BPPARAM = MulticoreParam(workers = 1), 
-    verbose = TRUE)
-bssmooth
-
-#Remove CpGs with coverage below 4 in all samples:
-BS.cov <- getCoverage(bssmooth)
-keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
-print("The number of CpGs with coverage >=4 in all samples:")
-length(keepLoci.ex)
-bssmooth <- bssmooth[keepLoci.ex,]
-
-
-#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
-print("Compute t-stats vs AT:")
-AT.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("AT1_E2_1", "AT1_E2_2", "AT1_E2_3"),  
-                                    group2 = c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-AT.tstat
-print("Compute t-stats vs NB:")
-NB.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("NB1_E2_1", "NB1_E2_2", "NB1_E2_3"),  
-                                    group2 = c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-NB.tstat
-
-
-#Finding DMRs
-print("Find DMRs vs NB:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(AT.dmrs)
-head(AT.dmrs, n = 3)
-write(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT1_dmrs.txt")
-
-print("Find DMRs vs AT:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(NB.dmrs)
-head(NB.dmrs, n = 3)
-write(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB1_dmrs.txt")
-
-#Plot the top 1000 DMRs
-print("Plot top NB DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT1_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, AT.dmrs[1:1000,], extend = 5000, 
-                addRegions = AT.dmrs)
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_AT3.png")
+plotTargetAnnotation(AT.Diff.25p.anot, main = "Differential Methylation Annotation BR vs AT Week 3")
 dev.off()
-print("Plot top AT DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB1_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, NB.dmrs[1:1000,], extend = 5000, 
-                addRegions = NB.dmrs)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_NB3.png")
+plotTargetAnnotation(NB.Diff.25p.anot, main = "Differential Methylation Annotation BR vs NB Week 3")
 dev.off()
 
-##################################################################################################################
+#CpG islands:
+#Load the CpG info
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+NB.diffCpGann <- annotateWithFeatureFlank(as(NB.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+AT.diffCpGann <- annotateWithFeatureFlank(as(AT.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
 
-library(bsseq)
-library(stats)
-library(BiocParallel)
+#Do CpG belong to a CpG Island or Shore
+NBissh <- getMembers(NB.diffCpGann)
+head(NBissh)
 
-#Read in data:
-col_names <- c("treatment", "replicate", "col")
-row_names <- c("BR3_E2_1", "BR3_E2_2", "BR3_E2_3", "NB3_E2_1", "NB3_E2_2", "NB3_E2_3", "AT3_E2_1", "AT3_E2_2", "AT3_E2_3")
-data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
-df <- data.frame(data, row.names = row_names)
-colnames(df) <- col_names
-print("Input dataframe:")
-print(df)
+ATissh <- getMembers(AT.diffCpGann)
+head(ATissh)
 
-bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_1/bismark/BR3_E2_1_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_2/bismark/BR3_E2_2_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_3/bismark/BR3_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_1/bismark/NB3_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_2/bismark/NB3_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_3/bismark/NB3_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_1/bismark/AT3_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_2/bismark/AT3_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_3/bismark/AT3_E2_3_bismark.deduplicated.CpG_report.txt"),
-    colData = df,
-    rmZeroCov = FALSE,
-    strandCollapse = TRUE,
-    verbose = TRUE)
+AT.dist_tss <- cbind(AT.dist_tss, ATissh)
+NB.dist_tss <- cbind(NB.dist_tss, NBissh)
 
-sapply(assays(bsseq, withDimnames = FALSE), class)
-print("Bsseq object:")
-bsseq
-pData(bsseq)
+write.table(NB.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB3.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT3.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 
-print("The average coverage of CpGs:")
-round(colMeans(getCoverage(bsseq)), 1)
-print("The number of CpGs:")
-length(bsseq)
-print("Number of CpGs which are covered by at least 1 read in all samples:")
-sum(rowSums(getCoverage(bsseq) >= 1) == 7)
-print("Number of CpGs with 0 coverage in all samples:")
-sum(rowSums(getCoverage(bsseq)) == 0)
-
-
-#Perform smoothing:
-#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
-
-bssmooth <- BSmooth(
-    BSseq = bsseq, 
-    ns = 70,
-    h = 1000,
-    maxGap = 10^8,
-    BPPARAM = MulticoreParam(workers = 1), 
-    verbose = TRUE)
-bssmooth
-
-#Remove CpGs with coverage below 4 in all samples:
-BS.cov <- getCoverage(bssmooth)
-keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
-print("The number of CpGs with coverage >=4 in all samples:")
-length(keepLoci.ex)
-bssmooth <- bssmooth[keepLoci.ex,]
-
-
-#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
-print("Compute t-stats vs AT:")
-AT.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("AT3_E2_1", "AT3_E2_2", "AT3_E2_3"),  
-                                    group2 = c("BR3_E2_1", "BR3_E2_2", "BR3_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-AT.tstat
-print("Compute t-stats vs NB:")
-NB.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("NB3_E2_1", "NB3_E2_2", "NB3_E2_3"),  
-                                    group2 = c("BR3_E2_1", "BR3_E2_2", "BR3_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-NB.tstat
-
-
-#Finding DMRs
-print("Find DMRs vs NB:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(AT.dmrs)
-head(AT.dmrs, n = 3)
-write(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT3_dmrs.txt")
-
-print("Find DMRs vs AT:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(NB.dmrs)
-head(NB.dmrs, n = 3)
-write(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB3_dmrs.txt")
-
-#Plot the top 1000 DMRs
-print("Plot top NB DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT3_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, AT.dmrs[1:1000,], extend = 5000, 
-                addRegions = AT.dmrs)
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_NB3.png")
+plotTargetAnnotation(NB.diffCpGann, main = "Differential Methylation Annotation NB3")
 dev.off()
-print("Plot top AT DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB3_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, NB.dmrs[1:1000,], extend = 5000, 
-                addRegions = NB.dmrs)
-dev.off()
-
-##################################################################################################################
-
-library(bsseq)
-library(stats)
-library(BiocParallel)
-
-#Read in data:
-col_names <- c("treatment", "replicate", "col")
-row_names <- c("BR6_E2_1", "BR6_E2_2", "BR6_E2_3", "NB6_E2_1", "NB6_E2_2", "NB6_E2_3", "AT6_E2_1", "AT6_E2_2", "AT6_E2_3")
-data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
-df <- data.frame(data, row.names = row_names)
-colnames(df) <- col_names
-print("Input dataframe:")
-print(df)
-
-bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bismark/BR6_E2_1_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_2/bismark/BR6_E2_2_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_3/bismark/BR6_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_1/bismark/NB6_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_2/bismark/NB6_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_3/bismark/NB6_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_1/bismark/AT6_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_2/bismark/AT6_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_3/bismark/AT6_E2_3_bismark.deduplicated.CpG_report.txt"),
-    colData = df,
-    rmZeroCov = FALSE,
-    strandCollapse = TRUE,
-    verbose = TRUE)
-
-sapply(assays(bsseq, withDimnames = FALSE), class)
-print("Bsseq object:")
-bsseq
-pData(bsseq)
-
-print("The average coverage of CpGs:")
-round(colMeans(getCoverage(bsseq)), 1)
-print("The number of CpGs:")
-length(bsseq)
-print("Number of CpGs which are covered by at least 1 read in all samples:")
-sum(rowSums(getCoverage(bsseq) >= 1) == 7)
-print("Number of CpGs with 0 coverage in all samples:")
-sum(rowSums(getCoverage(bsseq)) == 0)
-
-
-#Perform smoothing:
-#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
-
-bssmooth <- BSmooth(
-    BSseq = bsseq, 
-    ns = 70,
-    h = 1000,
-    maxGap = 10^8,
-    BPPARAM = MulticoreParam(workers = 1), 
-    verbose = TRUE)
-bssmooth
-
-#Remove CpGs with coverage below 4 in all samples:
-BS.cov <- getCoverage(bssmooth)
-keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
-print("The number of CpGs with coverage >=4 in all samples:")
-length(keepLoci.ex)
-bssmooth <- bssmooth[keepLoci.ex,]
-
-
-#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
-print("Compute t-stats vs AT:")
-AT.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("AT6_E2_1", "AT6_E2_2", "AT6_E2_3"),  
-                                    group2 = c("BR6_E2_1", "BR6_E2_2", "BR6_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-AT.tstat
-print("Compute t-stats vs NB:")
-NB.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("NB6_E2_1", "NB6_E2_2", "NB6_E2_3"),  
-                                    group2 = c("BR6_E2_1", "BR6_E2_2", "BR6_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-NB.tstat
-
-
-#Finding DMRs
-print("Find DMRs vs NB:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(AT.dmrs)
-head(AT.dmrs, n = 3)
-write(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT6_dmrs.txt")
-
-print("Find DMRs vs AT:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(NB.dmrs)
-head(NB.dmrs, n = 3)
-write(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB6_dmrs.txt")
-
-#Plot the top 1000 DMRs
-print("Plot top NB DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT6_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, AT.dmrs[1:1000,], extend = 5000, 
-                addRegions = AT.dmrs)
-dev.off()
-print("Plot top AT DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB6_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, NB.dmrs[1:1000,], extend = 5000, 
-                addRegions = NB.dmrs)
-dev.off()
-
-##################################################################################################################
-
-library(bsseq)
-library(stats)
-library(BiocParallel)
-
-#Read in data:
-col_names <- c("treatment", "replicate", "col")
-row_names <- c("BR9_E2_1", "BR9_E2_2", "BR9_E2_3", "NB9_E2_1", "NB9_E2_2", "NB9_E2_3", "AT9_E2_1", "AT9_E2_2", "AT9_E2_3")
-data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
-df <- data.frame(data, row.names = row_names)
-colnames(df) <- col_names
-print("Input dataframe:")
-print(df)
-
-bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_1/bismark/BR9_E2_1_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_2/bismark/BR9_E2_2_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_3/bismark/BR9_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_1/bismark/NB9_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_2/bismark/NB9_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_3/bismark/NB9_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_1/bismark/AT9_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_2/bismark/AT9_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_3/bismark/AT9_E2_3_bismark.deduplicated.CpG_report.txt"),
-    colData = df,
-    rmZeroCov = FALSE,
-    strandCollapse = TRUE,
-    verbose = TRUE)
-
-sapply(assays(bsseq, withDimnames = FALSE), class)
-print("Bsseq object:")
-bsseq
-pData(bsseq)
-
-print("The average coverage of CpGs:")
-round(colMeans(getCoverage(bsseq)), 1)
-print("The number of CpGs:")
-length(bsseq)
-print("Number of CpGs which are covered by at least 1 read in all samples:")
-sum(rowSums(getCoverage(bsseq) >= 1) == 7)
-print("Number of CpGs with 0 coverage in all samples:")
-sum(rowSums(getCoverage(bsseq)) == 0)
-
-
-#Perform smoothing:
-#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
-
-bssmooth <- BSmooth(
-    BSseq = bsseq, 
-    ns = 70,
-    h = 1000,
-    maxGap = 10^8,
-    BPPARAM = MulticoreParam(workers = 1), 
-    verbose = TRUE)
-bssmooth
-
-#Remove CpGs with coverage below 4 in all samples:
-BS.cov <- getCoverage(bssmooth)
-keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
-print("The number of CpGs with coverage >=4 in all samples:")
-length(keepLoci.ex)
-bssmooth <- bssmooth[keepLoci.ex,]
-
-
-#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
-print("Compute t-stats vs AT:")
-AT.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("AT9_E2_1", "AT9_E2_2", "AT9_E2_3"),  
-                                    group2 = c("BR9_E2_1", "BR9_E2_2", "BR9_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-AT.tstat
-print("Compute t-stats vs NB:")
-NB.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("NB9_E2_1", "NB9_E2_2", "NB9_E2_3"),  
-                                    group2 = c("BR9_E2_1", "BR9_E2_2", "BR9_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-NB.tstat
-
-
-#Finding DMRs
-print("Find DMRs vs NB:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(AT.dmrs)
-head(AT.dmrs, n = 3)
-write(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT9_dmrs.txt")
-
-print("Find DMRs vs AT:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(NB.dmrs)
-head(NB.dmrs, n = 3)
-write(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB9_dmrs.txt")
-
-#Plot the top 1000 DMRs
-print("Plot top NB DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT9_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, AT.dmrs[1:1000,], extend = 5000, 
-                addRegions = AT.dmrs)
-dev.off()
-print("Plot top AT DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB9_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, NB.dmrs[1:1000,], extend = 5000, 
-                addRegions = NB.dmrs)
-dev.off()
-
-##################################################################################################################
-
-library(bsseq)
-library(stats)
-library(BiocParallel)
-
-#Read in data:
-col_names <- c("treatment", "replicate", "col")
-row_names <- c("BR25_E2_1", "BR25_E2_2", "BR25_E2_3", "NB25_E2_1", "NB25_E2_2", "NB25_E2_3", "AT25_E2_1", "AT25_E2_2", "AT25_E2_3")
-data <- matrix(c("control", "control", "control", "NB", "NB", "NB", "AT", "AT", "AT", 1, 2, 3, 1, 2, 3, 1, 2, 3, "blue", "blue", "blue", "red", "red", "red", "green", "green", "green"), nrow = length(row_names), ncol = length(col_names))
-df <- data.frame(data, row.names = row_names)
-colnames(df) <- col_names
-print("Input dataframe:")
-print(df)
-
-bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_1/bismark/BR25_E2_1_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_2/bismark/BR25_E2_2_bismark.deduplicated.CpG_report.txt",
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_3/bismark/BR25_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_1/bismark/NB25_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_2/bismark/NB25_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_3/bismark/NB25_E2_3_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_1/bismark/AT25_E2_1_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_2/bismark/AT25_E2_2_bismark.deduplicated.CpG_report.txt", 
-     "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_3/bismark/AT25_E2_3_bismark.deduplicated.CpG_report.txt"),
-    colData = df,
-    rmZeroCov = FALSE,
-    strandCollapse = TRUE,
-    verbose = TRUE)
-
-sapply(assays(bsseq, withDimnames = FALSE), class)
-print("Bsseq object:")
-bsseq
-pData(bsseq)
-
-print("The average coverage of CpGs:")
-round(colMeans(getCoverage(bsseq)), 1)
-print("The number of CpGs:")
-length(bsseq)
-print("Number of CpGs which are covered by at least 1 read in all samples:")
-sum(rowSums(getCoverage(bsseq) >= 1) == 7)
-print("Number of CpGs with 0 coverage in all samples:")
-sum(rowSums(getCoverage(bsseq)) == 0)
-
-
-#Perform smoothing:
-#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
-
-bssmooth <- BSmooth(
-    BSseq = bsseq, 
-    ns = 70,
-    h = 1000,
-    maxGap = 10^8,
-    BPPARAM = MulticoreParam(workers = 1), 
-    verbose = TRUE)
-bssmooth
-
-#Remove CpGs with coverage below 4 in all samples:
-BS.cov <- getCoverage(bssmooth)
-keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 3)
-print("The number of CpGs with coverage >=4 in all samples:")
-length(keepLoci.ex)
-bssmooth <- bssmooth[keepLoci.ex,]
-
-
-#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
-print("Compute t-stats vs AT:")
-AT.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("AT25_E2_1", "AT25_E2_2", "AT25_E2_3"),  
-                                    group2 = c("BR25_E2_1", "BR25_E2_2", "BR25_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-AT.tstat
-print("Compute t-stats vs NB:")
-NB.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("NB25_E2_1", "NB25_E2_2", "NB25_E2_3"),  
-                                    group2 = c("BR25_E2_1", "BR25_E2_2", "BR25_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-NB.tstat
-
-
-#Finding DMRs
-print("Find DMRs vs NB:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(AT.dmrs)
-head(AT.dmrs, n = 3)
-write(AT.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT25_dmrs.txt")
-
-print("Find DMRs vs AT:")
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(NB.dmrs)
-head(NB.dmrs, n = 3)
-write(NB.dmrs, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB25_dmrs.txt")
-
-#Plot the top 1000 DMRs
-print("Plot top NB DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/AT25_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, AT.dmrs[1:1000,], extend = 5000, 
-                addRegions = AT.dmrs)
-dev.off()
-print("Plot top AT DMRs:")
-pdf(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/bsmooth/NB25_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, NB.dmrs[1:1000,], extend = 5000, 
-                addRegions = NB.dmrs)
-dev.off()
-
-##################################################################################################################
-
-
-
-
-#Test set
-col_names <- c("treatment", "replicate", "col")
-row_names <- c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3", "NB1_E2_1", "NB1_E2_3", "AT1_E2_1", "AT1_E2_2")
-data <- matrix(c("control", "control", "control", "NB", "NB", "AT", "AT", 1, 2, 3, 1, 3, 1, 2, "blue", "blue", "blue", "red", "red", "green", "green"), nrow = length(row_names), ncol = length(col_names))
-df <- data.frame(data, row.names = row_names)
-colnames(df) <- col_names
-print(df)
-
-bsseq <- read.bismark(files = c("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_BR1_E2_1_bismark.deduplicated.CpG_report.txt", "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_BR1_E2_2_bismark.deduplicated.CpG_report.txt", "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_BR1_E2_3_bismark.deduplicated.CpG_report.txt", "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_NB1_E2_1_bismark.deduplicated.CpG_report.txt", "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_NB1_E2_3_bismark.deduplicated.CpG_report.txt", "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_AT1_E2_1_bismark.deduplicated.CpG_report.txt", "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/temp_AT1_E2_2_bismark.deduplicated.CpG_report.txt"),
-    colData = df,
-    rmZeroCov = FALSE,
-    strandCollapse = TRUE,
-    verbose = TRUE)
-# This is a matrix-backed BSseq object.
-sapply(assays(bsseq, withDimnames = FALSE), class)
-bsseq
-pData(bsseq)
-
-#The average coverage of CpGs:
-round(colMeans(getCoverage(bsseq)), 1)
-#The number of CpGs:
-length(bsseq)
-#Number of CpGs which are covered by at least 1 read in all samples
-sum(rowSums(getCoverage(bsseq) >= 1) == 7)
-#Number of CpGs with 0 coverage in all samples
-sum(rowSums(getCoverage(bsseq)) == 0)
-
-#Perform smoothing:
-#"ns is the minimum number of CpGs contained in each window, h is half the minimum window with (the actual window width is either 2 times h or wide enough to contain ns covered CpGs, whichever is greater). Note that the window width is different at each position in the genome and may also be different for different samples at the same position, since it depends on how many nearby CpGs with non-zero coverage. Per default, a smoothing cluster is a whole chromosome. By “cluster” we mean a set of CpGs which are processed together. This means that even if there is a large distance between two CpGs, we borrow strength between them. By setting maxGap this can be prevented since the argument describes the longest distance between two CpGs before a cluster is broken up into two clusters." - all default:
-bssmooth <- BSmooth(
-    BSseq = bsseq, 
-    ns = 70,
-    h = 1000,
-    maxGap = 10^8,
-    BPPARAM = MulticoreParam(workers = 1), 
-    verbose = TRUE)
-bssmooth
-
-#Remove CpGs with coverage below 4 in all samples:
-BS.cov <- getCoverage(bssmooth)
-keepLoci.ex <- which(rowSums(BS.cov[, bsseq$treatment == "control"] >= 4) >= 3 &
-                     rowSums(BS.cov[, bsseq$treatment == "NB"] >= 4) >= 2 &
-                     rowSums(BS.cov[, bsseq$treatment == "AT"] >= 4) >= 2)
-length(keepLoci.ex)
-bssmooth <- bssmooth[keepLoci.ex,]
-
-#Compute t-statistics based on smoothed whole-genome bisulfite sequencing data:
-AT.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("AT1_E2_1", "AT1_E2_2"),  
-                                    group2 = c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-
-NB.tstat <- BSmooth.tstat(bssmooth,
-                                    group1 = c("NB1_E2_1", "NB1_E2_3"),  
-                                    group2 = c("BR1_E2_1", "BR1_E2_2", "BR1_E2_3"),
-                                    estimate.var = "group2",
-                                    local.correct = TRUE,
-                                    verbose = TRUE)
-
-#Finding DMRs
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-AT.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(AT.dmrs)
-head(AT.dmrs, n = 3)
-
-dmrs0 <- dmrFinder(AT.tstat, qcutoff = c(0.025, 0.975), maxGap=300, verbose = TRUE)
-#Filter out DMRs that do not have at least 3 CpGs in them and at least a mean difference (across the DMR) in methylation between normal and cancers of at least 0.1.
-NB.dmrs <- subset(dmrs0, n >= 3 & abs(meanDiff) >= 0.1)
-nrow(NB.dmrs)
-head(NB.dmrs, n = 3)
-
-#Plot the top 1000 DMRs
-pdf(file = "AT1_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, AT.dmrs[1:1000,], extend = 5000, 
-                addRegions = AT.dmrs)
-dev.off()
-pdf(file = "NB1_dmrs_top1000.pdf", width = 10, height = 5)
-plotManyRegions(bssmooth, NB.dmrs[1:1000,], extend = 5000, 
-                addRegions = NB.dmrs)
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_AT3.png")
+plotTargetAnnotation(AT.diffCpGann, main = "Differential Methylation Annotation AT3")
 dev.off()
 ```
+Annotate Week 6 differentially methylated sites:
 ```R
-#Convert from bsmap format to bsseq input format. 
+library("genomation")
+library("methylKit")
 
-library(bsseq)
+#Read in data:
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6diffmeth.RData")
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6diffmeth.RData")
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
 
-read.bsmap <- function(file) {
-    dat <- read.table(
-        file,
-        skip = 1,
-        row.names = NULL,
-        col.names = c("chr", "pos", "strand", "context", "ratio", "eff_CT_count", "C_count", "CT_count", "rev_G_count", "rev_GA_count", "CI_lower", "CI_upper"),
-        colClasses = c("character", "integer", "character", "character", "numeric", "numeric", "integer", "integer", "integer", "integer", "numeric", "numeric"))
-    #remove all non-CpG calls.  This includes SNPs
-    dat <- dat[dat$context == "CG", ]
-    dat$context <- NULL
-    dat$chr <- paste("chr", dat$chr, sep = "")
-    #join separate lines for each strand
-    tmp <- dat[dat$strand == "+", ]
-    BS.forward <- BSseq(
-        pos = tmp$pos,
-        chr = tmp$chr,
-        M = as.matrix(tmp$C_count, ncol = 1),
-        Cov = as.matrix(tmp$CT_count, ncol = 1),
-        sampleNames = "forward")
-    tmp <- dat[dat$strand == "-", ]
-    BS.reverse <- BSseq(
-        pos = tmp$pos - 1L,
-        chr = tmp$chr,
-        M = as.matrix(tmp$C_count, ncol = 1),
-        Cov = as.matrix(tmp$CT_count, ncol = 1),
-        sampleNames = "reverse")
-    BS <- combine(BS.forward, BS.reverse)
-    BS <- collapseBSseq(BS, group = c("a", "a"), type = "integer")
-    BS
-}
+#Promoter/exon/introns:
+#Annotate differentially methylated sites with promoter/exon/intron information.
+AT.Diff.25p.anot <- annotateWithGeneParts(target = as(AT.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
+NB.Diff.25p.anot <- annotateWithGeneParts(target = as(NB.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
 
-# List all the files
-file_paths <- list.files("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/", pattern = "bsmap_ratios_filtered.txt", recursive = TRUE, full.names = TRUE)
+#Report distance to the nearest Transcription Start Site, the target.row column in the output indicates the row number in the initial target set
+AT.dist_tss <- getAssociationWithTSS(AT.Diff.25p.anot)
+head(AT.dist_tss)
 
-# Loop through each file and combine
-bs_objects <- list()
+NB.dist_tss <- getAssociationWithTSS(NB.Diff.25p.anot)
+head(NB.dist_tss)
 
-for (file_path in file_paths) {
-  sample_name <- sub("_bsmap_ratios_filtered", "", tools::file_path_sans_ext(basename(file_path)))
-  assign(paste0("BS.", sample_name), read.bsmap(file_path))
-  bs_objects[[sample_name]] <- get(paste0("BS.", sample_name))
-  sampleNames(bs_objects[[sample_name]]) <- sample_name
-}
+#Report whether the differentially methylated CpGs are within promoters,introns or exons; the order is the same as the target set
+ATpie <- getMembers(AT.Diff.25p.anot)
+NBpie <- getMembers(NB.Diff.25p.anot)
+AT.dist_tss <- cbind(AT.dist_tss, ATpie)
+NB.dist_tss <- cbind(NB.dist_tss, NBpie)
 
-BS.hostswap <- do.call(combine, bs_objects)
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_AT6.png")
+plotTargetAnnotation(AT.Diff.25p.anot, main = "Differential Methylation Annotation BR vs AT Week 6")
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_NB6.png")
+plotTargetAnnotation(NB.Diff.25p.anot, main = "Differential Methylation Annotation BR vs NB Week 6")
+dev.off()
 
-#Add replicate information
-pData(BS.hostswap)$Rep <- c("replicate1", "replicate2", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2", "replicate3", "replicate1", "replicate2")
-validObject(BS.hostswap)
-pData(BS.hostswap)
+#CpG islands:
+#Load the CpG info
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+NB.diffCpGann <- annotateWithFeatureFlank(as(NB.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+AT.diffCpGann <- annotateWithFeatureFlank(as(AT.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
 
-#Save to file
-save(BS.hostswap, file = "BS.hostswap.rda")
-tools::resaveRdaFiles("BS.hostswap.rda")
+#Do CpG belong to a CpG Island or Shore
+NBissh <- getMembers(NB.diffCpGann)
+head(NBissh)
+
+ATissh <- getMembers(AT.diffCpGann)
+head(ATissh)
+
+AT.dist_tss <- cbind(AT.dist_tss, ATissh)
+NB.dist_tss <- cbind(NB.dist_tss, NBissh)
+
+write.table(NB.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB6.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT6.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_NB6.png")
+plotTargetAnnotation(NB.diffCpGann, main = "Differential Methylation Annotation NB6")
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_AT6.png")
+plotTargetAnnotation(AT.diffCpGann, main = "Differential Methylation Annotation AT6")
+dev.off()
 ```
+Annotate Week 9 differentially methylated sites:
+```R
+library("genomation")
+library("methylKit")
+
+#Read in data:
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9diffmeth.RData")
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9diffmeth.RData")
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
+
+#Promoter/exon/introns:
+#Annotate differentially methylated sites with promoter/exon/intron information.
+AT.Diff.25p.anot <- annotateWithGeneParts(target = as(AT.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
+NB.Diff.25p.anot <- annotateWithGeneParts(target = as(NB.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
+
+#Report distance to the nearest Transcription Start Site, the target.row column in the output indicates the row number in the initial target set
+AT.dist_tss <- getAssociationWithTSS(AT.Diff.25p.anot)
+head(AT.dist_tss)
+
+NB.dist_tss <- getAssociationWithTSS(NB.Diff.25p.anot)
+head(NB.dist_tss)
+
+#Report whether the differentially methylated CpGs are within promoters,introns or exons; the order is the same as the target set
+ATpie <- getMembers(AT.Diff.25p.anot)
+NBpie <- getMembers(NB.Diff.25p.anot)
+AT.dist_tss <- cbind(AT.dist_tss, ATpie)
+NB.dist_tss <- cbind(NB.dist_tss, NBpie)
+
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_AT9.png")
+plotTargetAnnotation(AT.Diff.25p.anot, main = "Differential Methylation Annotation BR vs AT Week 9")
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_NB9.png")
+plotTargetAnnotation(NB.Diff.25p.anot, main = "Differential Methylation Annotation BR vs NB Week 9")
+dev.off()
+
+#CpG islands:
+#Load the CpG info
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+NB.diffCpGann <- annotateWithFeatureFlank(as(NB.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+AT.diffCpGann <- annotateWithFeatureFlank(as(AT.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+
+#Do CpG belong to a CpG Island or Shore
+NBissh <- getMembers(NB.diffCpGann)
+head(NBissh)
+
+ATissh <- getMembers(AT.diffCpGann)
+head(ATissh)
+
+AT.dist_tss <- cbind(AT.dist_tss, ATissh)
+NB.dist_tss <- cbind(NB.dist_tss, NBissh)
+
+write.table(NB.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB9.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT9.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_NB9.png")
+plotTargetAnnotation(NB.diffCpGann, main = "Differential Methylation Annotation NB9")
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_AT9.png")
+plotTargetAnnotation(AT.diffCpGann, main = "Differential Methylation Annotation AT9")
+dev.off()
+```
+Annotate Week 25 differentially methylated sites:
+```R
+library("genomation")
+library("methylKit")
+
+#Read in data:
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25diffmeth.RData")
+load(file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25diffmeth.RData")
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
+
+#Promoter/exon/introns:
+#Annotate differentially methylated sites with promoter/exon/intron information.
+AT.Diff.25p.anot <- annotateWithGeneParts(target = as(AT.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
+NB.Diff.25p.anot <- annotateWithGeneParts(target = as(NB.Diff.25p,"GRanges"),
+                                       feature = refseq_anot)
+
+#Report distance to the nearest Transcription Start Site, the target.row column in the output indicates the row number in the initial target set
+AT.dist_tss <- getAssociationWithTSS(AT.Diff.25p.anot)
+head(AT.dist_tss)
+
+NB.dist_tss <- getAssociationWithTSS(NB.Diff.25p.anot)
+head(NB.dist_tss)
+
+#Report whether the differentially methylated CpGs are within promoters,introns or exons; the order is the same as the target set
+ATpie <- getMembers(AT.Diff.25p.anot)
+NBpie <- getMembers(NB.Diff.25p.anot)
+AT.dist_tss <- cbind(AT.dist_tss, ATpie)
+NB.dist_tss <- cbind(NB.dist_tss, NBpie)
+
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_AT25.png")
+plotTargetAnnotation(AT.Diff.25p.anot, main = "Differential Methylation Annotation BR vs AT Week 25")
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/CpGs_in_gene_region_NB25.png")
+plotTargetAnnotation(NB.Diff.25p.anot, main = "Differential Methylation Annotation BR vs NB Week 25")
+dev.off()
+
+#CpG islands:
+#Load the CpG info
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+NB.diffCpGann <- annotateWithFeatureFlank(as(NB.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+AT.diffCpGann <- annotateWithFeatureFlank(as(AT.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+
+#Do CpG belong to a CpG Island or Shore
+NBissh <- getMembers(NB.diffCpGann)
+head(NBissh)
+
+ATissh <- getMembers(AT.diffCpGann)
+head(ATissh)
+
+AT.dist_tss <- cbind(AT.dist_tss, ATissh)
+NB.dist_tss <- cbind(NB.dist_tss, NBissh)
+
+write.table(NB.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB25.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(AT.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT25.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+#Summarize for all differentially methylated CpGs
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_NB25.png")
+plotTargetAnnotation(NB.diffCpGann, main = "Differential Methylation Annotation NB25")
+dev.off()
+png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/Island_shore_AT25.png")
+plotTargetAnnotation(AT.diffCpGann, main = "Differential Methylation Annotation AT25")
+dev.off()
+```
+Combine annotations with DMCs:
+```bash
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT1.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB1.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT3.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB3.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT6.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB6.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT9.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB9.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT25.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+df1 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB25.txt", header = TRUE, sep = "\t")
+df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Diff_25p.txt", header = TRUE, sep = "\t")
+df3 <- cbind(df2, df1)
+write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+```
+#### Sliding window
+
+DMRs - sliding window - week 1
+```R
+library("genomation")
+library("methylKit")
+#Read in the methylation ratio files
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bsmap/CpG_BR1_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bsmap/CpG_BR1_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bsmap/CpG_BR1_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_1/bsmap/CpG_NB1_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_2/bsmap/CpG_NB1_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB1_E2_3/bsmap/CpG_NB1_E2_3_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR1_E2_1","BR1_E2_2","BR1_E2_3","NB1_E2_1","NB1_E2_2","NB1_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+NB.week1
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_1/bsmap/CpG_BR1_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_2/bsmap/CpG_BR1_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR1_E2_3/bsmap/CpG_BR1_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_1/bsmap/CpG_AT1_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT1_E2_2/bsmap/CpG_AT1_E2_2_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR1_E2_1","BR1_E2_2","BR1_E2_3","AT1_E2_1","AT1_E2_2"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+
+#Read in annotation info
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+
+##################################################################################################################
+
+#Group methylation count by sliding window region:
+NB.tiles <- tileMethylCounts(NB.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+NB.tiles.filt <- filterByCoverage(NB.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+NB.tiles.filt.norm <- normalizeCoverage(NB.tiles.filt, method = "median")
+NB.meth.tiles <- unite(NB.tiles.filt.norm, destrand=FALSE)
+NB.meth.tiles
+NB.diff.tiles <- calculateDiffMeth(NB.meth.tiles,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+NB.diff.tiles
+save(NB.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+#Group methylation count by sliding window region:
+AT.tiles <- tileMethylCounts(AT.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+AT.tiles.filt <- filterByCoverage(AT.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+AT.tiles.filt.norm <- normalizeCoverage(AT.tiles.filt, method = "median")
+AT.meth.tiles <- unite(AT.tiles.filt.norm, destrand=FALSE)
+AT.meth.tiles
+AT.diff.tiles <- calculateDiffMeth(AT.meth.tiles,
+                            treatment=c(0,0,0,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.diff.tiles
+save(AT.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+# Rank by significance
+NB.diff.tiles <- NB.diff.tiles[order(NB.diff.tiles$qvalue),]
+# get all differentially methylated regions
+NB.diff.tiles.25p <- getMethylDiff(NB.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+
+NB.diff.tiles.25p
+#0 rows - no differentially methylated regions
+
+##################################################################################################################
+
+# Rank by significance
+AT.diff.tiles <- AT.diff.tiles[order(AT.diff.tiles$qvalue),]
+# get all differentially methylated regions
+AT.diff.tiles.25p <- getMethylDiff(AT.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+AT.diff.tiles.25p
+#0 rows - no differentially methylated regions
+```
+DMRs - sliding window - week 3
+```R
+library("genomation")
+library("methylKit")
+#Read in the methylation ratio files
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_1/bsmap/CpG_BR3_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_2/bsmap/CpG_BR3_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_3/bsmap/CpG_BR3_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_1/bsmap/CpG_NB3_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_2/bsmap/CpG_NB3_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB3_E2_3/bsmap/CpG_NB3_E2_3_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR3_E2_1","BR3_E2_2","BR3_E2_3","NB3_E2_1","NB3_E2_2","NB3_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+NB.week1
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_1/bsmap/CpG_BR3_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_2/bsmap/CpG_BR3_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR3_E2_3/bsmap/CpG_BR3_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_1/bsmap/CpG_AT3_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_2/bsmap/CpG_AT3_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT3_E2_3/bsmap/CpG_AT3_E2_3_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR3_E2_1","BR3_E2_2","BR3_E2_3","AT3_E2_1","AT3_E2_2","AT3_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+
+#Read in annotation info
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+
+##################################################################################################################
+
+#Group methylation count by sliding window region:
+NB.tiles <- tileMethylCounts(NB.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+NB.tiles.filt <- filterByCoverage(NB.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+NB.tiles.filt.norm <- normalizeCoverage(NB.tiles.filt, method = "median")
+NB.meth.tiles <- unite(NB.tiles.filt.norm, destrand=FALSE)
+NB.meth.tiles
+NB.diff.tiles <- calculateDiffMeth(NB.meth.tiles,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+NB.diff.tiles
+save(NB.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+#Group methylation count by sliding window region:
+AT.tiles <- tileMethylCounts(AT.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+AT.tiles.filt <- filterByCoverage(AT.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+AT.tiles.filt.norm <- normalizeCoverage(AT.tiles.filt, method = "median")
+AT.meth.tiles <- unite(AT.tiles.filt.norm, destrand=FALSE)
+AT.meth.tiles
+AT.diff.tiles <- calculateDiffMeth(AT.meth.tiles,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.diff.tiles
+save(AT.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+# Rank by significance
+NB.diff.tiles <- NB.diff.tiles[order(NB.diff.tiles$qvalue),]
+# get all differentially methylated regions
+NB.diff.tiles.25p <- getMethylDiff(NB.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+
+NB.diff.tiles.25p
+#0 rows - no differentially methylated regions
+
+##################################################################################################################
+
+# Rank by significance
+AT.diff.tiles <- AT.diff.tiles[order(AT.diff.tiles$qvalue),]
+# get all differentially methylated regions
+AT.diff.tiles.25p <- getMethylDiff(AT.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+AT.diff.tiles.25p
+#0 rows - no differentially methylated regions
+```
+DMRs - sliding window - week 6
+```R
+library("genomation")
+library("methylKit")
+#Read in the methylation ratio files
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bsmap/CpG_BR6_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_2/bsmap/CpG_BR6_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_3/bsmap/CpG_BR6_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_1/bsmap/CpG_NB6_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_2/bsmap/CpG_NB6_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_3/bsmap/CpG_NB6_E2_3_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR6_E2_1","BR6_E2_2","BR6_E2_3","NB6_E2_1","NB6_E2_2","NB6_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+NB.week1
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bsmap/CpG_BR6_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_2/bsmap/CpG_BR6_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_3/bsmap/CpG_BR6_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_1/bsmap/CpG_AT6_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_2/bsmap/CpG_AT6_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_3/bsmap/CpG_AT6_E2_3_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR6_E2_1","BR6_E2_2","BR6_E2_3","AT6_E2_1","AT6_E2_2","AT6_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+
+#Read in annotation info
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+
+##################################################################################################################
+
+#Group methylation count by sliding window region:
+NB.tiles <- tileMethylCounts(NB.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+NB.tiles.filt <- filterByCoverage(NB.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+NB.tiles.filt.norm <- normalizeCoverage(NB.tiles.filt, method = "median")
+NB.meth.tiles <- unite(NB.tiles.filt.norm, destrand=FALSE)
+NB.meth.tiles
+NB.diff.tiles <- calculateDiffMeth(NB.meth.tiles,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+NB.diff.tiles
+save(NB.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+#Group methylation count by sliding window region:
+AT.tiles <- tileMethylCounts(AT.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+AT.tiles.filt <- filterByCoverage(AT.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+AT.tiles.filt.norm <- normalizeCoverage(AT.tiles.filt, method = "median")
+AT.meth.tiles <- unite(AT.tiles.filt.norm, destrand=FALSE)
+AT.meth.tiles
+AT.diff.tiles <- calculateDiffMeth(AT.meth.tiles,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.diff.tiles
+save(AT.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+# Rank by significance
+NB.diff.tiles <- NB.diff.tiles[order(NB.diff.tiles$qvalue),]
+# get all differentially methylated regions
+NB.diff.tiles.25p <- getMethylDiff(NB.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+
+NB.diff.tiles.25p
+#0 rows - no differentially methylated regions
+
+##################################################################################################################
+
+# Rank by significance
+AT.diff.tiles <- AT.diff.tiles[order(AT.diff.tiles$qvalue),]
+# get all differentially methylated regions
+AT.diff.tiles.25p <- getMethylDiff(AT.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+AT.diff.tiles.25p
+#0 rows - no differentially methylated regions
+```
+DMRs - sliding window - week 9
+```R
+library("genomation")
+library("methylKit")
+#Read in the methylation ratio files
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_1/bsmap/CpG_BR9_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_2/bsmap/CpG_BR9_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_3/bsmap/CpG_BR9_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_1/bsmap/CpG_NB9_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB9_E2_2/bsmap/CpG_NB9_E2_2_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR9_E2_1","BR9_E2_2","BR9_E2_3","NB9_E2_1","NB9_E2_2"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+NB.week1
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_1/bsmap/CpG_BR9_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_2/bsmap/CpG_BR9_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR9_E2_3/bsmap/CpG_BR9_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_1/bsmap/CpG_AT9_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_2/bsmap/CpG_AT9_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT9_E2_3/bsmap/CpG_AT9_E2_3_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR9_E2_1","BR9_E2_2","BR9_E2_3","AT9_E2_1","AT9_E2_2","AT9_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+
+#Read in annotation info
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+
+##################################################################################################################
+
+#Group methylation count by sliding window region:
+NB.tiles <- tileMethylCounts(NB.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+NB.tiles.filt <- filterByCoverage(NB.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+NB.tiles.filt.norm <- normalizeCoverage(NB.tiles.filt, method = "median")
+NB.meth.tiles <- unite(NB.tiles.filt.norm, destrand=FALSE)
+NB.meth.tiles
+NB.diff.tiles <- calculateDiffMeth(NB.meth.tiles,
+                            treatment=c(0,0,0,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+NB.diff.tiles
+save(NB.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB9_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+#Group methylation count by sliding window region:
+AT.tiles <- tileMethylCounts(AT.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+AT.tiles.filt <- filterByCoverage(AT.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+AT.tiles.filt.norm <- normalizeCoverage(AT.tiles.filt, method = "median")
+AT.meth.tiles <- unite(AT.tiles.filt.norm, destrand=FALSE)
+AT.meth.tiles
+AT.diff.tiles <- calculateDiffMeth(AT.meth.tiles,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.diff.tiles
+save(AT.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+# Rank by significance
+NB.diff.tiles <- NB.diff.tiles[order(NB.diff.tiles$qvalue),]
+# get all differentially methylated regions
+NB.diff.tiles.25p <- getMethylDiff(NB.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+
+NB.diff.tiles.25p
+#2 rows 
+
+#Annotate
+NB.diff.tiles.25p.ann <- annotateWithGeneParts(target = as(NB.diff.tiles.25p, "GRanges"), feature = refseq_anot)
+NB.dist_tss <- getAssociationWithTSS(NB.Diff.25p.anot)
+NBpie <- getMembers(NB.Diff.25p.anot)
+NB.dist_tss <- cbind(NB.dist_tss, NBpie)
+NB.diffCpGann <- annotateWithFeatureFlank(as(NB.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+NBissh <- getMembers(NB.diffCpGann)
+NB.dist_tss <- cbind(NB.dist_tss, NBissh)
+
+write.table(NB.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_NB9_windowed.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+##################################################################################################################
+
+# Rank by significance
+AT.diff.tiles <- AT.diff.tiles[order(AT.diff.tiles$qvalue),]
+# get all differentially methylated regions
+AT.diff.tiles.25p <- getMethylDiff(AT.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+AT.diff.tiles.25p
+#0 rows - no differentially methylated regions
+```
+DMRs - sliding window - week 25
+```R
+library("genomation")
+library("methylKit")
+#Read in the methylation ratio files
+NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_1/bsmap/CpG_BR25_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_2/bsmap/CpG_BR25_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_3/bsmap/CpG_BR25_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_1/bsmap/CpG_NB25_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_2/bsmap/CpG_NB25_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB25_E2_3/bsmap/CpG_NB25_E2_3_bsmap_ratios_filtered.txt")
+NB.week1=methRead(NB.file.list, 
+    sample.id=list("BR25_E2_1","BR25_E2_2","BR25_E2_3","NB25_E2_1","NB25_E2_2","NB25_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+NB.week1
+AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_1/bsmap/CpG_BR25_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_2/bsmap/CpG_BR25_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR25_E2_3/bsmap/CpG_BR25_E2_3_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_1/bsmap/CpG_AT25_E2_1_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_2/bsmap/CpG_AT25_E2_2_bsmap_ratios_filtered.txt",
+"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT25_E2_3/bsmap/CpG_AT25_E2_3_bsmap_ratios_filtered.txt")
+AT.week1=methRead(AT.file.list, 
+    sample.id=list("BR25_E2_1","BR25_E2_2","BR25_E2_3","AT25_E2_1","AT25_E2_2","AT25_E2_3"),
+    assembly="O_v2",
+    header=TRUE,
+    treatment=c(0,0,0,1,1,1),
+    mincov = 4,
+    context="CpG",
+    resolution="base",
+    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
+AT.week1
+
+#Read in annotation info
+refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
+cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
+
+##################################################################################################################
+
+#Group methylation count by sliding window region:
+NB.tiles <- tileMethylCounts(NB.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+NB.tiles.filt <- filterByCoverage(NB.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+NB.tiles.filt.norm <- normalizeCoverage(NB.tiles.filt, method = "median")
+NB.meth.tiles <- unite(NB.tiles.filt.norm, destrand=FALSE)
+NB.meth.tiles
+NB.diff.tiles <- calculateDiffMeth(NB.meth.tiles,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+NB.diff.tiles
+save(NB.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+#Group methylation count by sliding window region:
+AT.tiles <- tileMethylCounts(AT.week1,win.size=1000,step.size=1000,cov.bases = 10)
+
+#Filter and normalise
+AT.tiles.filt <- filterByCoverage(AT.tiles,
+                      lo.count=4,
+                      lo.perc=NULL,
+                      hi.count=NULL,
+                      hi.perc=99.9)
+AT.tiles.filt.norm <- normalizeCoverage(AT.tiles.filt, method = "median")
+AT.meth.tiles <- unite(AT.tiles.filt.norm, destrand=FALSE)
+AT.meth.tiles
+AT.diff.tiles <- calculateDiffMeth(AT.meth.tiles,
+                            treatment=c(0,0,0,1,1,1),
+                            overdispersion = "MN",
+                            adjust="BH")
+AT.diff.tiles
+save(AT.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25_diffmeth_windowed.RData")
+
+#################################################################################################################
+
+# Rank by significance
+NB.diff.tiles <- NB.diff.tiles[order(NB.diff.tiles$qvalue),]
+# get all differentially methylated regions
+NB.diff.tiles.25p <- getMethylDiff(NB.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+
+NB.diff.tiles.25p
+#0 rows - no differentially methylated regions
+
+##################################################################################################################
+
+# Rank by significance
+AT.diff.tiles <- AT.diff.tiles[order(AT.diff.tiles$qvalue),]
+# get all differentially methylated regions
+AT.diff.tiles.25p <- getMethylDiff(AT.diff.tiles,
+                        difference=25,
+                        qvalue=0.01)
+AT.diff.tiles.25p
+#1 row
+
+#Annotate
+AT.diff.tiles.25p.ann <- annotateWithGeneParts(target = as(AT.diff.tiles.25p, "GRanges"), feature = refseq_anot)
+AT.dist_tss <- getAssociationWithTSS(AT.Diff.25p.anot)
+ATpie <- getMembers(AT.Diff.25p.anot)
+AT.dist_tss <- cbind(AT.dist_tss, NBpie)
+AT.diffCpGann <- annotateWithFeatureFlank(as(AT.Diff.25p,"GRanges"), feature = cpg_anot$CpGi, flank = cpg_anot$shores, feature.name = "CpGi", flank.name = "shores")
+ATissh <- getMembers(AT.diffCpGann)
+AT.dist_tss <- cbind(AT.dist_tss, NBissh)
+
+write.table(AT.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT25_windowed.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+```
+
+### Custom
+Common approaches for differential methylation analysis are Bsmooth, Methylkit or a custom approach to define differentially methylated regions (DMRs) DOI:10.1093/bib/bbx077
+
+Custom
 ```bash
 
 ```
+
+
+
+
 ## Check for transcriptional changes over the course of the experiments 1 & 2
 ### QC 
 #### fastqc 
@@ -2106,12 +3709,13 @@ if ! grep -q "$x" /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_pe
 fi
 done
 
+sleep 10800s
 #Run phase 2 step for these 23 with increased heap space:
 for file in $(cat temp_trinity_23.txt); do
 #Trinity --single $file --output ${file}.out --CPU 1 --max_memory 1G --run_as_paired --seqType fa --trinity_complete --full_cleanup --min_kmer_cov 2 --verbose --bflyHeapSpaceMax 100G
 sbatch ~/git_repos/Wrappers/NBI/temp4.sh $file
 done
-#57795755-77
+#57795755-77,57806588-604
 
 #Trinity's checkpoints only work if the original command hasn't been modified, --FORCE must therefore be used to force inclusion of both the 401026 and 23 in the final transcriptome:
 Trinity --full_cleanup --seqType fq --CPU 64 --max_memory 4030G --min_kmer_cov 2 --normalize_by_read_set --verbose --FORCE\
@@ -2121,23 +3725,6 @@ Trinity --full_cleanup --seqType fq --CPU 64 --max_memory 4030G --min_kmer_cov 2
 #57765347 - check for errors after the 99.994% sticking point that will now be forced but have not been run in isolation?
 
 cp /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome.Trinity.fasta /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome.Trinity-force1.fasta
-
-
-
-#du --max-depth=1 --total -h /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome
-#468G    total
-
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome/read_partitions/Fb_*/CBin_*/*.trinity.reads.fa); do
-if  [ ! -e ${file}.out.Trinity.fasta ]; then
-echo ${file}
-fi
-done
-Finished.  Final Trinity assemblies are written to /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome/read_partitions/Fb_*/CBin_*/*.trinity.reads.fa.out.Trinity.fasta
-
-
-
-
-Trinity --single "$file" --output "${file}.out" --CPU 1 --max_memory 1G --run_as_paired --seqType fa --trinity_complete --full_cleanup --min_kmer_cov 2 --verbose --bflyHeapSpaceMax 100G
 ```
 
 ```bash
