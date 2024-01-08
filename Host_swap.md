@@ -1,6 +1,47 @@
 # Three host swap 
 
-## Collect data
+Contains analysis of the 3 host swap experiment performed by M. Gravino and others
+
+## Contents
+1.[Collect data](#1)
+2.[Check mutations in the aphid genomes over the course of the experiment with WGS](#2)
+        1.[QC](#3)
+                1.[fastqc and qualimap](#4)
+        2.[Trimming](#5)
+                1.[Trim galore](#6)
+        3.[Alignment](#7)
+                1.[Picard and GATK](#8)
+        4.[Variant calling](#9)
+        5.[Filter](#10)
+                1.[Genmap filter for genome mappability](#11)
+                2.[Filter samples for missingness:](#12)
+                3.[Filter for SNP quality:](#13)
+3.[Check for epigenetic changes over the course of the experiment with WGBS](#14)
+                1.[fastqc and qualimap](#15)
+        2.[Trimming](#16)
+                1.[Trim galore](#17)
+        3.[BSmooth](#18)
+                1.[Bismark alignment](#19)
+                2.[BSsmooth](#20)
+        4.[Methylkit](#21)
+                1.[BSmap alignment](#22)
+                2.[Filter cytosine postions](#23)
+                3.[Methylkit](#24)
+                4.[Genomation](#25)
+                5.[Sliding window](#26)
+        5.[Custom](#27)
+4.[Check for transcriptional changes over the course of the experiments 1 & 2](#28)
+        1.[QC](#29)
+                1.[fastqc](#30)
+        2.[Trimming](#31)
+        3.[Mapping](#32)
+                1.[Alignment free approach](#33)
+                        1.[Trinity](#34)
+                2.[Alignment approach](#35)
+                        1.[STAR](#36)
+                        2.[Stringtie](#37)
+
+## Collect data <a name="1"></a>
 Data was copied from storage with the Swarbreck group to the Hogenhout scratch space (not backed up as already backed up with Swarbreck group).
 
 All files that look like analysis not raw data have been removed/not copied over in order to save space.
@@ -91,11 +132,11 @@ cp -r Effector /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/Archana
 cp -r * /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/Archana_hostadaptation_analysis/alternative_splicing/.
 rm -r /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/Archana_hostadaptation_analysis
 ```
-## Check mutations in the aphid genomes over the course of the experiment with WGS
+## Check mutations in the aphid genomes over the course of the experiment with WGS <a name="2"></a>
 This is the purpose of the WGS data which was collected at the start and end of each experimental repeat from each host, ie.: generation 1 of aphids exposed to Br in experiments 1 and 2 (E1, E2), the generation 39 of aphids exposed to Br, At, Nb in E1, and the generation 25 of aphids exposed to Br, At, Nb in E2. 
 
-### QC 
-#### fastqc and qualimap
+### QC  <a name="3"></a>
+#### fastqc and qualimap <a name="4"></a>
 Raw reads were assessed for quality and coverage of the clone O_v2 reference assembly:
 ```bash
 for ReadDir in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/WGS/Archana_Feb2021/ -mindepth 1 -type d); do
@@ -134,8 +175,8 @@ BR25_E2 raw reads have average coverage of 23.7613
 AT25_E2 raw reads have average coverage of 19.7724
 NB25_E2 raw reads have average coverage of 21.6007
 
-### Trimming
-#### Trim galore
+### Trimming <a name="5"></a>
+#### Trim galore <a name="6"></a>
 Adapters and low quality regions were trimmed from raw reads via trim-galore:
 ```bash
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/WGS/Archana_Feb2021/*_E*); do
@@ -192,11 +233,11 @@ BR25_E2 raw reads have average coverage of 23.6622
 AT25_E2 raw reads have average coverage of 19.69
 NB25_E2 raw reads have average coverage of 21.5096
 
-### Alignment
+### Alignment <a name="7"></a>
 
 Alignment to reference genome is performed as part of run_raw_read_qc.sh with bwa-mem (previous step).
 
-#### Picard and GATK
+#### Picard and GATK <a name="8"></a>
 
 Files were sorted by scaffold and coordinate level, duplicates were marked and removed and the files were re-indexed:
 ```bash
@@ -245,7 +286,7 @@ sbatch $ProgDir/run_realign.sh $file $Reference
 done #57519857-64
 ```
 
-### Variant calling
+### Variant calling <a name="9"></a>
 
 Combined into a .vcf and called variants with bcftools:
 ```bash
@@ -257,8 +298,8 @@ bcftools mpileup -b /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/ba
 bcftools call --ploidy 2 -Oz -v -m -o /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/BR_AT_NB_hostswap.vcf.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/BR_AT_NB_hostswaps.vcf.gz
 #57520372
 ```
-### Filter 
-#### Genmap filter for genome mappability
+### Filter  <a name="10"></a>
+#### Genmap filter for genome mappability <a name="11"></a>
 
 We further refined our input files by calculating mappability of the genome with GenMap (v1.3.0) with the parameters -K 100 -E 2. This estimates k-mer uniqueness and identifies regions of the genome where Illumina reads are unable to map uniquely. We masked all regions larger than 100 bp with less than 1 i.e., max mappability. 10.1038/s41586-021-04269-6 and 10.1038/s41467-023-43383-z use k=100 for 150bp paired reads.
 ```bash
@@ -311,7 +352,7 @@ plt.tight_layout()
 
 plt.savefig('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/genmap/genemap_mappability_plot.png')
 ```
-#### Filter samples for missingness:
+#### Filter samples for missingness: <a name="12"></a>
 ```bash
 source package /nbi/software/testing/bin/vcftools-0.1.15
 vcftools --gzvcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/Archana_Feb2021/gatk/genmap/BR_AT_NB_hostswap_callable.vcf.gz --missing-indv
@@ -339,7 +380,7 @@ plt.savefig('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calli
 ```
 Missingness for all eight samples is very low - they are all genuine M.persicae samples (as expected).
 
-#### Filter for SNP quality:
+#### Filter for SNP quality: <a name="13"></a>
 
 SNPs were filtered to keep only bi-allelic SNPs, with minimum depth of 5, minimum quality score of 30, and maximum missingness of SNPs of 10% (with 8 samples this means that SNP positions must be present in all samples). 
 ```bash
@@ -450,8 +491,8 @@ bedtools intersect -a ${Directory}/NB39_E1_swaponly.bed -b ${Directory}/NB25_E2_
 
 239 SNPs are found in both experiments from samples swapped onto N.benthamiana plants but not in samples kept on the same host, these could be investigated further to determine if they fall within coding regions and could be resposible for host adaptation, or are likely erroneous but missed by previous filters.
 
-## Check for epigenetic changes over the course of the experiment with WGBS
-#### fastqc and qualimap
+## Check for epigenetic changes over the course of the experiment with WGBS <a name="14"></a>
+#### fastqc and qualimap <a name="15"></a>
 Bisulfite treatment followed by PCR amplification specifically converts unmethylated cytosines to thymine, standard illumina sequencing is then performed. Fastqc can be used for QC, a specialist aligner is needed to take account of C2T conversions when aligning to the genome.
 
 Raw reads were assessed for quality and coverage of the clone O_v2 reference assembly:
@@ -476,8 +517,8 @@ done
 #57551367-57551414
 ```
 Raw read folder has been compressed to save space.
-### Trimming
-#### Trim galore
+### Trimming <a name="16"></a>
+#### Trim galore <a name="17"></a>
 
 Adapters and low quality regions were trimmed from raw reads via trim-galore:
 ```bash
@@ -523,10 +564,10 @@ coverage=$(grep 'mean coverageData' ${ReadDir}qualimap/*_genome_results_gff.txt 
 echo $sample raw reads have average coverage of ${coverage}
 done
 ```
-### BSmooth
+### BSmooth <a name="18"></a>
 Common approaches for differential methylation analysis are Bsmooth, Methylkit or a custom approach to define differentially methylated regions (DMRs) DOI:10.1093/bib/bbx077. Here bsmooth:
 
-#### Bismark alignment
+#### Bismark alignment <a name="19"></a>
 
 The best C2T aware aligner seems to be bsmap based upon the literature (eg.: DOI:10.1016/j.csbj.2022.08.051), however the bsmooth package does not have pre-built support for a bsmap input but does for bismark. Bismark alignment, assessment and 'genome wide cytosine report' were prepared, .bam files from this alignment were not saved as we have bsmap generated files already:
 ```bash
@@ -551,7 +592,7 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
 done
 #57768086-133
 ```
-#### BSsmooth
+#### BSsmooth <a name="20"></a>
 
 BSmooth is part of the BSseq R package, the package need to load the files into working memory, for our files this is more memory than a local machine has available, therefore R will have to be run on the HPC (which is a pain :().
 ```bash
@@ -1305,10 +1346,10 @@ save(BS.hostswap, file = "BS.hostswap.rda")
 tools::resaveRdaFiles("BS.hostswap.rda")
 ```
 
-### Methylkit
+### Methylkit <a name="21"></a>
 Common approaches for differential methylation analysis are Bsmooth, Methylkit or a custom approach to define differentially methylated regions (DMRs) DOI:10.1093/bib/bbx077. Here methylkit:
 
-#### BSmap alignment
+#### BSmap alignment <a name="22"></a>
 
 The best C2T aware aligner seems to be bsmap based upon the literature (eg.: DOI:10.1016/j.csbj.2022.08.051). Bsmap alignment and cytosine report was performed:
 ```bash
@@ -1346,7 +1387,7 @@ rev_GA_count: Count of guanine-adenine pairs on the reverse strand corresponding
 CI_lower: Lower bound of the confidence interval for the methylation ratio.
 CI_upper: Upper bound of the confidence interval for the methylation ratio.
 
-#### Filter cytosine postions
+#### Filter cytosine postions <a name="23"></a>
 ```bash
 for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/*/bsmap/*bsmap_ratios.txt); do
 echo $file >> logs/bsmap_report.txt
@@ -1443,7 +1484,7 @@ cp temp_common_ids_0.txt common_ids_0.txt
 ```
 The number of sites which are totally unmethylated across all samples is only 690. Given this low number I will not bother to remove these sites.
 
-#### Methylkit
+#### Methylkit <a name="24"></a>
 ```bash
 #Seperate CpG methylation context Cs.
 for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/*/bsmap/*filtered.txt); do
@@ -2615,7 +2656,7 @@ write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven
 save(AT.Diff.25p.hyper, AT.Diff.25p.hyper, AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT25diffmeth.RData")
 ```
 
-#### Genomation
+#### Genomation <a name="25"></a>
 
 Annotate differentially methylated sites to determine if they fall within promoter, intronic or exonic regions, or CpG islands.
 
@@ -3015,7 +3056,7 @@ df2 <- read.table("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/ana
 df3 <- cbind(df2, df1)
 write.table(df3, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Diff_25p_annotated.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 ```
-#### Sliding window
+#### Sliding window <a name="26"></a>
 
 DMRs - sliding window - week 1
 ```R
@@ -3573,7 +3614,7 @@ AT.dist_tss <- cbind(AT.dist_tss, NBissh)
 write.table(AT.dist_tss, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/tss_AT25_windowed.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 ```
 
-### Custom
+### Custom <a name="27"></a>
 Common approaches for differential methylation analysis are Bsmooth, Methylkit or a custom approach to define differentially methylated regions (DMRs) DOI:10.1093/bib/bbx077
 
 Custom
@@ -3584,9 +3625,9 @@ Custom
 
 
 
-## Check for transcriptional changes over the course of the experiments 1 & 2
-### QC 
-#### fastqc 
+## Check for transcriptional changes over the course of the experiments 1 & 2 <a name="28"></a>
+### QC  <a name="29"></a>
+#### fastqc  <a name="30"></a>
 
 Experiment 1:
 ```bash
@@ -3608,7 +3649,7 @@ for Reads in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_
     sbatch $ProgDir/run_fastqc.sh $Reads $OutDir $OutFile
 done
 ```
-### Trimming
+### Trimming <a name="31"></a>
 
 Trimming ommitted for alignment to genome approach as per doi: 10.1093/nargab/lqaa068 and doi: 10.1186/s12859-016-0956-2 - 'soft clipping' when using alignment based mapping approach should make trimming unnessessary - use <--quantTranscriptomeBan Singleend> with STAR.
 
@@ -3661,14 +3702,14 @@ for dir in $(ls -d /jic/research-groups/Saskia-Hogenhout/reads/RNASeq/Myzus_pers
 done
 ```
 
-### Mapping
+### Mapping <a name="32"></a>
 We don't have a reference transcriptome for M.persicae for alignment free approach.
 
-#### Alignment free approach
+#### Alignment free approach <a name="33"></a>
 
 Could generate de novo transcriptome with trinity. Trinity could find novel transcritps from George's data however discovering novel transcripts is not the focus of this study.
 
-##### Trinity
+##### Trinity <a name="34"></a>
 
 It is unclear whether the 'soft clipping' logic applies to trinity, will therefore use trinity trimming function.
 
@@ -3747,9 +3788,9 @@ salmon index -t transcripts.fa -i transcripts_index --decoys decoys.txt -k 31
 wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/gencode.vM23.transcripts.fa.gz
 wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/GRCm38.primary_assembly.genome.fa.gz
 
-#### Alignment approach
+#### Alignment approach <a name="35"></a>
 
-##### STAR
+##### STAR <a name="36"></a>
 ```bash
 #Make STAR index for M.persicae
 mkdir /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/GenomeDir
@@ -3791,7 +3832,7 @@ done
 
 
 
-##### Stringtie
+##### Stringtie <a name="37"></a>
 
 Stringtie generation of transcriptome for alignment free appraoch requires alignments...
 

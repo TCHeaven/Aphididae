@@ -1,3 +1,11 @@
+# Gene prediction
+We are interested whether all genes have been successfully annotated in the M. persicae genome; v2.0 annotations were initially performed by T. mathers using braker2, David swarbreck performed v2.1 annotations - his methods for this are not shared - this is our best current annotation, M. Marzo reports success with the helixer annotator.
+
+It may be possible to improve annotations with the addition of George's organ transcriptome data.
+
+It may be possible to add to annotations with new/different methods: trinity assembly free prediction, braker3, EASEL
+
+'Bicycle genes' may be missing from the annotations performed to data - found in other aphid species.
 
 ## Collecting data
 For M. persicae, we aligned 25 RNA-seq libraries. Specifically, we used a high-coverage (200 million reads), strand-specific, RNA-seq library generated from mixed whole bodies of apterous M. persicae clone O asexual females (Mathers et al. 2017 - PRJEB11304) as well as newly generated (PRJNA613055) and publicly available (Mathers et al. 2019 - PRJNA437622) unstranded RNA-seq data for M. persicae clone O nymphs (derived from apterous asexual females), alate asexual females, apterous asexual females and males (six biological replicates each).
