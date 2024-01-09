@@ -1256,7 +1256,7 @@ function is_valid_time {
 
 #for Seqfile in $(cat temp_csep_files.txt); do
 
-for Seqfile in $(cat temp_files.txt); do
+for Seqfile in $(tac temp_files.txt); do
 Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
 echo $Jobs 1
 TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
