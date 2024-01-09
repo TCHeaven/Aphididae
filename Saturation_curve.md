@@ -1,5 +1,42 @@
-# Exploring the diversity of the aphid samples
+# Exploring the diversity of the aphid samples as part of the M. persicae population genomics project
+
+Contains SNP filtering, network analysis and rarefaction curve plotting.
+
+## Contents
+1.[Data quality control](#1)
+        1.[Coverage](#2)
+        2.[Missingness](#3)
+                1.[VCFstats](#4)
+2.[Distribution of SNPs](#5)
+        1.[Sliding window](#6)
+3.[Extract genic SNPs](#7)
+        1.[Genic regions](#8)
+        2.[CDS/exon/UTR regions](#9)
+        3.[CDS regions](#10)
+        4.[SNPEff non-synonymous SNPs](#11)
+4.[P_distance](#12)
+        1.[Whole genome SNPs](#13)
+                1.[Splitstree](#14)
+        2.[Genic and CDS SNPs](#15)
+                1.[Splitstree](#16)
+        3.[Non-synonymous SNPs](#17)
+                1.[Splitstree](#18)
+        4.[Synonymous SNPs](#19)
+                1.[Splitstree](#20)
+5.[SNP rarefaction curve](#21)
+        1.[Corehunter (redundant)](#22)
+        2.[True Rarefaction curves](#23)
+                1.[Whole genome SNPs](#24)
+                2.[Genic SNPs](#25)
+                3.[For Bass and JIC samples seperately - Whole genome and genic](#26)
+                4.[Fitting a curve](#27)
+6.[vcftools plot of saturation curve](#28)
+7.[Nei gene diversity](#29)
+8.[Check for SNPs of clone O versus itself to control for diploidy](#30)
+
 Unless stated otherwise work was performed from the directory: /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
+
+SNP calling has previously been performed by R.Wouters and R.biello.
 
 Collecting data:
 ```bash
@@ -10,11 +47,11 @@ ln -s /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_p
 
 ls /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa.gz
 ```
-## Data quality control
+## Data quality control <a name="1"></a>
 The SNP data has already been filtered by R.Wouters and R.biello with vcftools etc.
 
-### Coverage
-Coverage:
+### Coverage <a name="2"></a>
+Coverage of each asample was explored:
 ```bash
 mkdir snp_calling/Myzus/persicae/biello/gatk/reports
 #JIC samples
@@ -23,16 +60,12 @@ for sample in $(ls /jic/scratch/groups/Saskia-Hogenhout/roland/Myzus_periscae_po
     Coverage=$(grep 'mean coverageData' $sample)
     echo $SampleName $Coverage >> snp_calling/Myzus/persicae/biello/gatk/reports/JIC_coverage.txt
 done
-
-grep 'mean coverageData' /jic/scratch/groups/Saskia-Hogenhout/roland/Myzus_periscae_popgen/Output/realigned_BAM_files/UKW3.sorted.mark_dups.realigned_stats/genome_results.txt
-
-\\jic-hpc-data\Group-Scratch\Saskia-Hogenhout\roland\Myzus_periscae_popgen\Output\realigned_BAM_files\A105.sorted.mark_dups.realigned_stats
-
-switch-institute nbi; source jdk-7u45; /jic/research-groups/Saskia-Hogenhout/Roland/qualimap_v2.2.1/qualimap bamqc -nt 16 -bam ../A105.sorted.mark_dups.realigned.bam
 ```
-### Missingness
-The number of SNPs per sample was explored.
+Some samples have <15X coverage according the Rolands results, but are included in the "final" .vcf file?
 
+### Missingness <a name="3"></a>
+
+The number of SNPs per sample was explored.
 ```bash
 source package /nbi/software/testing/bin/vcftools-0.1.15
 vcftools --vcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/209s.M_persicae.onlySNPs.vcf --missing-indv
@@ -157,7 +190,135 @@ gzip -cd /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_po
 cut -f10,15,65,70,88,89,174,186,189,198,199,204,207,211,213,217 --complement snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.vcf > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs.vcf
 
 zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz | wc -l #11,871,310
+```
+Remove SNPs which have no minor allele now that the high missingness samples have been removed:
+```bash
 vcftools --gzvcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz --mac 1 --recode --recode-INFO-all --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1 #After filtering, kept 1,851,865 out of a possible 11,870,914 Sites
+```
+#### VCFstats <a name="4"></a>
+```bash
+for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz); do
+    InFile=$vcf
+    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity
+    OutFile=193_genic
+    Exclusion_list=
+    ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
+    mkdir $OutDir
+    sbatch $ProgDir/run_vcfstats.sh $InFile $OutDir $OutFile $Exclusion_list
+done #55244504
+```
+Plot VCFStats
+```R
+setwd("C:/Users/did23faz/OneDrive - Norwich Bioscience Institutes/Desktop/R")
+
+install.packages("tidyverse")
+install.packages("ggplot2")
+
+library(tidyverse)
+library(ggplot2)
+
+var_qual <- read_delim("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity/193_genic_site_qual.lqual", delim = "\t",
+                       col_names = c("CHROM", "POS", "QUAL"), skip = 1)
+
+var_depth <- read_delim("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity/193_genic_site-mean-depth.ldepth.mean", delim = "\t",
+                        col_names = c("chr", "pos", "mean_depth", "var_depth"), skip = 1)
+
+var_miss <- read_delim("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity/193_genic_missing_sites.lmiss", delim = "\t",
+                       col_names = c("chr", "pos", "nchr", "nfiltered", "nmiss", "fmiss"), skip = 1)
+
+var_freq <- read_delim("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity/193_genic_allele_freq.frq", delim = "\t",
+                       col_names = c("chr", "pos", "nalleles", "nchr", "a1", "a2"), skip = 1)
+
+var_count <- read_delim("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity/193_genic_allele_count.frq.count", delim = "\t",
+                       col_names = c("chr", "pos", "nalleles", "nchr", "count", "a2"), skip = 1)
+
+ind_depth <- read_delim("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity/193_genic_depth.idepth", delim = "\t",
+                        col_names = c("ind", "nsites", "depth"), skip = 1)
+
+ind_miss  <- read_delim("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity/193_genic_missing_ind.imiss", delim = "\t",
+                        col_names = c("ind", "ndata", "nfiltered", "nmiss", "fmiss"), skip = 1)
+
+ind_het <- read_delim("//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/SNP_diversity/193_genic_het.het", delim = "\t",
+                      col_names = c("ind","ho", "he", "nsites", "f"), skip = 1)
+
+
+p1 <- ggplot(var_qual, aes(QUAL)) + geom_density(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_light() + labs(title = "Genic SNPs: Per Site Quality")
+p1 <- p1 + theme(plot.title = element_text(hjust = 0.5))
+pdf("193_genic_var_qual.pdf", width=11, height=7)
+plot(p1, pdf=T)
+dev.off()
+
+p2 <- ggplot(var_depth, aes(mean_depth)) + geom_density(fill = "dodgerblue1", colour = "black", alpha = 0.3) + labs(title = "Genic SNPs: Mean Depth Per Site")
+p2 <- p2 + theme(plot.title = element_text(hjust = 0.5))
+summary(var_depth$mean_depth)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#  8.249  16.212  19.529  18.710  21.285  30.829 
+pdf("193_genic_var_depth.pdf", width=11, height=7)
+plot(p2, pdf=T)
+dev.off()
+
+p3 <- ggplot(var_depth, aes(mean_depth)) + geom_density(fill = "dodgerblue1", colour = "black", alpha = 0.3) + xlim(0, 100) + labs(title = "Genic SNPs: Mean Depth Per Site")
+p3 <- p3 + theme(plot.title = element_text(hjust = 0.5))
+pdf("193_genic_var_depth_x100.pdf", width=11, height=7)
+plot(p3, pdf=T)
+dev.off()
+
+p4 <- ggplot(var_miss, aes(fmiss)) + geom_density(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_light() + labs(title = "Genic SNPs: Missingness Per Site")
+p4 <- p4 + theme(plot.title = element_text(hjust = 0.5))
+summary(var_miss$fmiss)
+#    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+# 0.000000 0.005181 0.010363 0.016646 0.025907 0.108808 
+pdf("193_genic_var_miss.pdf", width=11, height=7)
+plot(p4, pdf=T)
+dev.off()
+
+var_freq$maf <- var_freq %>% select(a1, a2) %>% apply(1, function(z) min(z))
+summary(var_freq$maf)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 0.00000 0.00000 0.00000 0.01121 0.00000 0.50000 
+p5 <- ggplot(var_freq, aes(maf)) + geom_density(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_light() + labs(title = "Genic SNPs: Allele Frequency for Each Site")
+p5 <- p5 + theme(plot.title = element_text(hjust = 0.5))
+pdf("193_genic_var_freq.pdf", width=11, height=7)
+plot(p5, pdf=T)
+dev.off()
+p51 <- ggplot(var_freq, aes(maf)) + geom_density(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_light() + labs(title = "Genic SNPs: Allele Frequency for Each Site") + xlim(0, 0.1)
+p51 <- p51 + theme(plot.title = element_text(hjust = 0.5))
+pdf("193_genic_var_freq_0.1.pdf", width=11, height=7)
+plot(p51, pdf=T)
+dev.off()
+
+p6 <- ggplot(var_count, aes(x = count)) + geom_density(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_light() + labs(title = "Genic SNPs: Raw Allele Counts for Each Site")
+p6 <- p6 + theme(plot.title = element_text(hjust = 0.5))
+pdf("193_genic_allele_count_density.pdf", width = 11, height = 7)
+plot(p6, pdf=T)
+dev.off()
+
+p7 <- ggplot(ind_depth, aes(depth)) + geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_light() + labs(title = "Genic SNPs: Mean Depth Per Individual")
+p7 <- p7 + theme(plot.title = element_text(hjust = 0.5))
+pdf("193_genic_ind_depth.pdf", width=11, height=7)
+plot(p7, pdf=T)
+dev.off()
+
+p8 <- ggplot(ind_miss, aes(fmiss)) + geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_light() + labs(title = "Genic SNPs: Missingness Per Individual")
+p8 <- p8 + theme(plot.title = element_text(hjust = 0.5))
+pdf("193_genic_ind_miss.pdf", width=11, height=7)
+plot(p8, pdf=T)
+dev.off()
+
+p9 <- ggplot(ind_het, aes(f)) + geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_light() + labs(title = "Genic SNPs: Heterozygosity Per Individual")
+p9 <- p9 + theme(plot.title = element_text(hjust = 0.5))
+pdf("193_genic_ind_het.pdf", width=11, height=7)
+plot(p9, pdf=T)
+dev.off()
+```
+## Distribution of SNPs <a name="5"></a>
+
+Find the number of SNPs per chromosome:
+```bash
+vcftools --vcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf --positions scaff1-6.bed --window-pi 10000 --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.snp_counts
+
+bcftools query -f '%CHROM\t%POS\n' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf | \
+    awk -F '\t' '{if ($1 ~ /^scaffold_[1-6]$/) count[$1]++;} END {for (i=1; i<=6; i++) print "scaffold_"i ": " count["scaffold_"i] " SNPs";}'
 
 nano scaff1-6.bed
 ##CHROM  START   END
@@ -167,14 +328,10 @@ nano scaff1-6.bed
 #scaffold4   1   62328371
 #scaffold5   1   30612500
 #scaffold6   1   29865500
-
-vcftools --vcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf --positions scaff1-6.bed --window-pi 10000 --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.snp_counts
-
-bcftools query -f '%CHROM\t%POS\n' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf | \
-    awk -F '\t' '{if ($1 ~ /^scaffold_[1-6]$/) count[$1]++;} END {for (i=1; i<=6; i++) print "scaffold_"i ": " count["scaffold_"i] " SNPs";}'
-
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
 ```
+#### Sliding window <a name="6"></a>
+
+Investigate the distribution of SNPs across the M. persicae genome, by counting the number of SNPs in sliding windows and plotting:
 ```python
 import pysam
 import matplotlib.pyplot as plt
@@ -330,21 +487,28 @@ for scaffold in [f'scaffold_{i}' for i in range(1, 7)]:
         plt.close()
 ```
 
-## Extract genic SNPs
+## Extract genic SNPs <a name="7"></a>
+
+#### Genic regions <a name="8"></a>
+
+Extract genic SNPs to new .vcf files:
 ```bash
 wc -l snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3
 #902,603
 
+#the reduced set of 193 SNPs after removing high missingness samples:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 \
 -header > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf
 
+#the reduced set of 193 SNPs after removing high missingness samples, + M. ligustri:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 \
 -header > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-genic-regions.vcf
 
+#The original 210 samples from wouters+biello:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 \
@@ -356,7 +520,7 @@ zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-ge
 bgzip -c /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf > /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz
 zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz | wc -l #31,637,658
 
-#deduplicated files with:
+#deduplicate files with:
 Files=("snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz" "/jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-genic-regions.vcf.gz")
 for file in "${Files[@]}"; do
     singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 /hpc-home/did23faz/git_repos/Scripts/NBI/remove_duplicate_snps.py $file 
@@ -376,36 +540,30 @@ zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_popula
 vcftools --gzvcf snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz --mac 1 --recode --recode-INFO-all --out snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-mac1-regions #After filtering, kept 944,154 out of a possible 6,782,669 Sites
 
 awk '{ if ($3 == "gene") sum += $5 - $4 + 1 } END { print sum }' snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 #247,120,340 = the number of base pairs covered by gene features - possibly an overestimate as some may overlap?
-
-
-######################################################################################################################
-# Mouse genome, version mm37.61
-mm37.61.genome : Mouse
-
-# Peach potato genome, version 2.1
-M_persicae.genome : aphid
-
-
-
-snpEff ann -i vcf -o gff -ud 0 myzus_persicae snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz > snp_effects.gff
-
 ```
+Gene regions cover over half of the genome and over half of SNPs are retained when extracting genic SNPs - as would be expected.
+
+#### CDS/exon/UTR regions <a name="9"></a>
+
 Extract CDS/exon/UTR regions region SNPs:
 ```bash
 grep '#\|CDS\|exon\|five_prime_UTR\|three_prime_UTR' snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 > snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3
 wc -l snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3
 #806,274
 
+#the reduced set of 193 SNPs after removing high missingness samples:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
 -header > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf
 
+#the reduced set of 193 SNPs after removing high missingness samples, + M. ligustri:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
 -header > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf
 
+#The original 210 samples from wouters+biello:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_exon_UTR_annotation.gff3 \
@@ -421,7 +579,7 @@ zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_popula
 
 rm snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf 
 
-#deduplicated files with:
+#deduplicate files with:
 Files=("snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz" "snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz" "/jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz")
 for file in "${Files[@]}"; do
     singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 /hpc-home/did23faz/git_repos/Scripts/NBI/remove_duplicate_snps.py $file 
@@ -439,22 +597,27 @@ zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CD
 zcat snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz | wc -l #1,925,747
 zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_exon_UTR_genic-regions.vcf.gz | wc -l #1,925,747
 ```
+#### CDS regions <a name="10"></a>
+
 Extract CDS region SNPs:
 ```bash
 grep '#\|CDS' snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 > snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_annotation.gff3
 wc -l snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_annotation.gff3
 #336,709
 
+#the reduced set of 193 SNPs after removing high missingness samples:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_annotation.gff3 \
 -header > snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf
 
+#the reduced set of 193 SNPs after removing high missingness samples, + M. ligustri:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_annotation.gff3 \
 -header > snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf
 
+#The original 210 samples from wouters+biello:
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
 -a /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs.vcf.gz \
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_annotation.gff3 \
@@ -471,7 +634,7 @@ zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_popula
 
 rm snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf
 
-#deduplicated files with:
+#deduplicate files with:
 Files=("snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz" "snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz" "/jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz")
 for file in "${Files[@]}"; do
     singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 /hpc-home/did23faz/git_repos/Scripts/NBI/remove_duplicate_snps.py $file 
@@ -489,6 +652,7 @@ zcat snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CD
 zcat snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz | wc -l #1,240,584
 zcat /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/210s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz | wc -l #1,240,584
 
+#REMOVE SNPS THAT HAVE NO MINOR ALLELE COUNT NOW THAT HIGH MISSINGNESS SAMPLES HAVE BEEN REMOVED:
 vcftools --gzvcf snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz --mac 1 --recode --recode-INFO-all --out snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions #After filtering, kept 126,162 out of a possible 1,240,188 Sites
 bgzip snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.vcf
 vcftools --gzvcf snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic-regions.vcf.gz --mac 1 --recode --recode-INFO-all --out snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic_mac1-regions #After filtering, kept 406,201 out of a possible 1,240,188 Sites
@@ -502,16 +666,12 @@ singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybe
 -b snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.vcf.gz \
 -header > /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/MYZPE13164_O_EIv2.1.CDS_annotation_withsnpsonly.gff3
 awk -F "\t" '{print $9}' /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/MYZPE13164_O_EIv2.1.CDS_annotation_withsnpsonly.gff3 | cut -d ';' -f2 | sort | uniq | wc -l #33,428
-
-#################################################################################################################################
-#Convert .vcf to annovar format
-convert2annovar.pl -format vcf4 snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz -outfile ex2.avinput -allsample -includeinfo #-withzyg -withfreq
-annotate_variation.pl --regionanno --dbtype gff3 --gff3dbfile MYZPE13164_O_EIv2.1.annotation.gff3 ex2.avinput /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/ --out ex1
-
-
-annotate_variation.pl --geneanno --dbtype gff3 --gff3dbfile MYZPE13164_O_EIv2.1.annotation.gff3 ex2.avinput /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/ --out ex1
 ```
-Non-synonymous CDS SNPs
+Many CDS contain SNPs
+
+#### SNPEff non-synonymous SNPs <a name="11"></a>
+
+Extract Non-synonymous CDS SNPs using Variant effect predictor (VEP):
 ```bash
 source package /tgac/software/testing/bin/bedops-2.2.0
 source package 4028d6e4-21a8-45ec-8545-90e4ed7e1a64
@@ -535,30 +695,9 @@ singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/vep.
 /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/vep.sif
 
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/vep.sif vep --custom file=Filename,short_name=Short_name,format=File_type,type=Annotation_type,coords=Force_report_coordinates,fields=VCF_fields
-
-scaffold_1      MYZPE13164_O_EIv2.1     gene    8196    9175    545     -       .       ID=MYZPE13164_O_EIv2.1_0000010;Name=MYZPE13164_O_EIv2.1_0000010;biotype=transposable_element_gene;confidence=High
-scaffold_1      MYZPE13164_O_EIv2.1     mRNA    8196    9175    545     -       .       ID=MYZPE13164_O_EIv2.1_0000010.1;Parent=MYZPE13164_O_EIv2.1_0000010;Name=MYZPE13164_O_EIv2.1_0000010.1;Note=MYZPE13164_O_EIv2.1_00000$
-scaffold_1      MYZPE13164_O_EIv2.1     three_prime_UTR 8196    8329    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.three_prime_UTR1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     exon    8196    9175    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.exon1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     CDS     8330    9085    .       -       0       ID=MYZPE13164_O_EIv2.1_0000010.1.CDS1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     five_prime_UTR  9086    9175    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.five_prime_UTR1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-
-
-scaffold_1      MYZPE13164_O_EIv2.1     three_prime_UTR 8196    8329    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.three_prime_UTR1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     exon    8196    9175    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.exon1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     gene    8196    9175    545     -       .       ID=MYZPE13164_O_EIv2.1_0000010;Name=MYZPE13164_O_EIv2.1_0000010;biotype=transposable_element_gene;confidence=High
-scaffold_1      MYZPE13164_O_EIv2.1     mRNA    8196    9175    545     -       .       ID=MYZPE13164_O_EIv2.1_0000010.1;Parent=MYZPE13164_O_EIv2.1_0000010;Name=MYZPE13164_O_EIv2.1_0000010.1;Note=MYZPE13164_O_EIv2.1_00000$
-scaffold_1      MYZPE13164_O_EIv2.1     CDS     8330    9085    .       -       0       ID=MYZPE13164_O_EIv2.1_0000010.1.CDS1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     five_prime_UTR  9086    9175    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.five_prime_UTR1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-
-
-scaffold_1      MYZPE13164_O_EIv2.1     three_prime_UTR 8196    8329    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.three_prime_UTR1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     exon    8196    9175    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.exon1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     gene    8196    9175    545     -       .       ID=MYZPE13164_O_EIv2.1_0000010;Name=MYZPE13164_O_EIv2.1_0000010;biotype=transposable_element_gene;confidence=High
-scaffold_1      MYZPE13164_O_EIv2.1     mRNA    8196    9175    545     -       .       ID=MYZPE13164_O_EIv2.1_0000010.1;Parent=MYZPE13164_O_EIv2.1_0000010;Name=MYZPE13164_O_EIv2.1_0000010.1;Note=MYZPE13164_O_EIv2.1_00000$
-scaffold_1      MYZPE13164_O_EIv2.1     CDS     8330    9085    .       -       0       ID=MYZPE13164_O_EIv2.1_0000010.1.CDS1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-scaffold_1      MYZPE13164_O_EIv2.1     five_prime_UTR  9086    9175    .       -       .       ID=MYZPE13164_O_EIv2.1_0000010.1.five_prime_UTR1;Parent=MYZPE13164_O_EIv2.1_0000010.1
-
+```
+Extract Non-synonymous CDS SNPs using and SNPEff:
+```bash
 source package 3e7beb4d-f08b-4d6b-9b6a-f99cc91a38f9
 nano ~/snpEff/snpEff.config
 ## Myzus persicae genome, version O2_0
@@ -586,34 +725,10 @@ java17 -Xmx8g -jar snpEff.jar m_persicae_O_2_0 /jic/scratch/groups/Saskia-Hogenh
 
 cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.ann.vcf | grep -v 'synonymous_variant' > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf 
 wc -l /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf #57,940 -> 57,544 non-synonymous SNPs
-
-
-
-WARNING_FILE_NOT_FOUND: Rare Amino Acid analysis: Cannot read protein sequence file '/hpc-home/did23faz/snpEff/./data/m_persicae_O_2_0/protein.fa', nothing done.
-ERROR: CDS check file '/hpc-home/did23faz/snpEff/./data/m_persicae_O_2_0/cds.fa' not found.
-ERROR: Protein check file '/hpc-home/did23faz/snpEff/./data/m_persicae_O_2_0/protein.fa' not found.
-ERROR: Database check failed.
-
-source package /tgac/software/testing/bin/bedops-2.2.0
-source package 4028d6e4-21a8-45ec-8545-90e4ed7e1a64
-source package /tgac/software/testing/bin/gffread-0.11.4
-for scaffold in $(ls /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/*.fa); do
-name=$(echo $scaffold | cut -d '/' -f11 | sed 's@.fa@@g')
-echo $name
-#To extract whole gene sequences (NOTE: some are very long):
-gff2bed < /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}.gff > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}.bed
-grep "gene" /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}.bed > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}_2.bed
-bedtools getfasta -fi $scaffold -bed /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}_2.bed -fo /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}.gff3.nt2 -name+
-#To extract CDS only:
-gffread -x /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}.gff3.nt3 -g $scaffold /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}.gff
-done 
-
-cat /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/scaffold_*.gff3.nt2 > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.gene.fa
-cat /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/scaffold_*.gff3.nt3 > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.CDS.fa
-rm -r /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds
 ```
+There are 57,544 non-synonymous SNPs
 
-## P_distance
+## P_distance <a name="12"></a>
 A distance matrix was calculated for the samples.
 
 p-distance  is the proportion (p) of nucleotide sites at which two sequences being compared are different. It is obtained by dividing the number of nucleotide differences by the total number of nucleotides compared.
@@ -621,12 +736,15 @@ p-distance  is the proportion (p) of nucleotide sites at which two sequences bei
 distmat calculates the evolutionary distance between every pair of sequences in a multiple sequence alignment. A variety of methods to estimate distance may be selected, and differ in how they correct the observed substitution rates to more accurately reflect the true evolutionary distance. An output file containing a distance matrix for the set of sequences is written. The distances are expressed in terms of the number of substitutions per 100 bases or amino acids.
 
 Generated for with and without ligustri as some analysis require an outgroup and others do not.
-#### Whole genome SNPs
+### Whole genome SNPs <a name="13"></a>
+
+Generate a distance matrix from .vcf file:
 ```bash
 source package /nbi/software/testing/bin/bcftools-1.8
 interactive
 bcftools stats snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.vcf.gz > snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs_stats.txt
 
+#The original 210 samples from wouters+biello:
 mkdir snp_calling/Myzus/persicae/biello/gatk/p_distance
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.vcf.gz); do
 echo $vcf
@@ -637,7 +755,7 @@ sbatch $ProgDir/run_VCF2Dis.sh $vcf $OutDir $Outfile
 done
 #Submitted batch job 54236748
 
-#Without ligustri:
+#The original 210 samples from wouters+biello, without ligustri:
 cd snp_calling/Myzus/persicae/biello/gatk/filtered
 gunzip -c 210s.M_persicae.onlySNPs.vcf.gz > 210s.M_persicae.onlySNPs.vcf
 cat 210s.M_persicae.onlySNPs.vcf | awk -F'\t' '{for (i=1; i<=NF; i++) if ($i ~ /ligustri/) {print i; exit}}'
@@ -657,6 +775,7 @@ done
 cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered
 gunzip 209s.M_persicae.onlySNPs.vcf.gz 
 
+#the reduced set of 193 SNPs after removing high missingness samples:
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz); do
 echo $vcf
 ProgDir=~/git_repos/Wrappers/NBI
@@ -666,6 +785,7 @@ sbatch $ProgDir/run_VCF2Dis.sh $vcf $OutDir $Outfile
 done
 #54355967
 
+#the reduced set of 193 SNPs after removing high missingness samples + ligustri:
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/ligustri+193s.M_persicae.onlySNPs.vcf.gz); do
 echo $vcf
 ProgDir=~/git_repos/Wrappers/NBI
@@ -751,7 +871,49 @@ print("Done")
 
 exit()
 ```
-#### Genic SNPs
+Reformat:
+```python
+import csv
+
+def read_distance_matrix_from_csv(csv_file):
+    distance_matrix = {}
+    with open(csv_file, 'r') as f:
+        reader = csv.DictReader(f)
+        taxa_names = reader.fieldnames[1:]
+        for row in reader:
+            taxon = row['ID']
+            distances = {taxa_names[i]: float(row[taxa_names[i]]) for i in range(len(taxa_names))}
+            distance_matrix[taxon] = distances
+    return distance_matrix
+
+def convert_to_phylip(distance_matrix, output_file):
+    num_taxa = len(distance_matrix)
+    taxa_names = list(distance_matrix.keys())
+    with open(output_file, 'w') as f:
+        f.write(str(num_taxa) + '\n')
+        for i in range(num_taxa):
+            taxon_distances = []
+            for j in range(num_taxa):
+                taxon_distances.append(str(distance_matrix[taxa_names[i]][taxa_names[j]]))
+            f.write(taxa_names[i] + '\t' + '\t'.join(taxon_distances) + '\n')
+
+csv_file = '/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_193+ligustri_mperc.csv'
+output_file = '/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_193+ligustri_mperc.dist'
+
+distance_matrix = read_distance_matrix_from_csv(csv_file)
+convert_to_phylip(distance_matrix, output_file)
+```
+#### Splitstree <a name="14"></a>
+
+Construct a phylogenetic network for the samples, based upon the SNP data.
+```bash
+source package 7654f72b-1692-46bb-9a56-443406d03fd9
+SplitsTree
+```
+
+### Genic and CDS SNPs <a name="15"></a>
+
+Generate a distance matrix from .vcf file, for genic and CDS SNPs:
 ```bash
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz); do
 echo $vcf
@@ -793,6 +955,11 @@ done
 #56700915
 
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
+```
+Generate an ID based p-distmat input for R
+```bash
+source package /nbi/software/production/bin/python-2.7.11
+python
 ```
 ```python
 from collections import defaultdict
@@ -878,6 +1045,7 @@ print("Done")
 
 exit()
 ```
+Reformat:
 ```python
 import csv
 
@@ -909,12 +1077,16 @@ output_file = '/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_cal
 distance_matrix = read_distance_matrix_from_csv(csv_file)
 convert_to_phylip(distance_matrix, output_file)
 ```
+#### Splitstree <a name="16"></a>
+
+Construct a phylogenetic network for the samples, based upon the genic and CDS SNP data.
 ```bash
 source package 7654f72b-1692-46bb-9a56-443406d03fd9
 SplitsTree
 ```
-#### Non-synonymous SNPs
+### Non-synonymous SNPs <a name="17"></a>
 
+Generate a distance matrix from .vcf file, for non-synonymous SNPs:
 ```bash
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf.gz); do
 echo $vcf
@@ -926,6 +1098,11 @@ done
 #57060954
 
 singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
+```
+Generate an ID based p-distmat input for R
+```bash
+source package /nbi/software/production/bin/python-2.7.11
+python
 ```
 ```python
 from collections import defaultdict
@@ -947,6 +1124,7 @@ with open("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling
     for a in acc_order:
         outf.write(",".join([a] + acc[a]) + "\n")
 ```
+Reformat:
 ```python
 import csv
 
@@ -980,367 +1158,16 @@ convert_to_phylip(distance_matrix, output_file)
 
 exit()
 ```
+#### Splitstree <a name="18"></a>
+
+Construct a phylogenetic network for the samples, based upon the non-synonymous SNP data.
 ```bash
 source package 7654f72b-1692-46bb-9a56-443406d03fd9
 SplitsTree
 ```
-Collect genes that have non-synonymous SNPs in them:
-```bash
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
--a /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 \
--b /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf.gz \
--header > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation-nonsynonymous.gff3
+### Synonymous SNPs <a name="19"></a>
 
-for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf.gz); do
-    InFile=$vcf
-    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3
-    OutFile=NA
-    GffFile=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3
-    ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-    mkdir $OutDir
-    sbatch $ProgDir/run_extract_gene_snps.sh $InFile $OutDir $OutFile $GffFile
-done #57083837, 57090045,57090519
-
-cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3
-for file in *.gz; do bgzip -d "$file"; done
-for x in $(ls *.vcf); do
-snpno=$(cat $x | wc -l) 
-snpno=$((snpno - 2))
-echo $x $snpno >> gene_snp_report.txt
-done
-sed -i 's/ /,/g' gene_snp_report.txt
-for file in *.vcf; do bgzip "$file"; done
-cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
-
-######################################################################################################################################################
-#Second approach
-mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene2
-grep 'gene' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation-nonsynonymous.gff3 > gene_lines.gff
-
-while IFS= read -r line; do
-    genename=$(echo $line | cut -d '=' -f2 | cut -d ';' -f1)
-    grep '##gff-version\|##sequence-region' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation-nonsynonymous.gff3 > ${genename}.gff3
-    sleep 3s
-    grep "$genename" /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation-nonsynonymous.gff3 > temp_gene_line.gff3 >> ${genename}.gff3
-    sleep 2s
-    genename=$(echo $line | cut -d '=' -f2 | cut -d ';' -f1)
-    echo $genename >> logs/bedtools_intersect.txt
-    vcf=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf.gz
-    OutFile=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene2/${genename}_snps.vcf
-    ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-    Jobs=$(squeue -u did23faz | grep 'bedtools' | wc -l)
-    while [ $Jobs -gt 99 ]; do
-    sleep 15s
-    printf "."
-    Jobs=$(squeue -u did23faz | grep 'bedtools' | wc -l)
-    done 
-    sbatch $ProgDir/bedtools_intersect.sh $vcf ${genename}.gff3 $OutFile 2>&1 >> logs/bedtools_intersect.txt
-done < gene_lines.gff
-```
-Plot cumulative frequency of SNPs in genes:
-```R
-df <- read.table(file = "//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report.txt", sep = ',', header = FALSE)
-
-# declaring data points
-data_points <- df[,2]
-
-# declaring the break points
-break_points = seq(0, 1000, by=1)
-# transforming the data
-data_transform = cut(data_points, break_points, right=FALSE)
-# creating the frequency table
-freq_table = table(data_transform)
-# printing the frequency table
-print("Frequency Table")
-print(freq_table)
-# calculating cumulative frequency
-cumulative_freq = c(0, cumsum(freq_table))
-print("Cumulative Frequency")
-print(cumulative_freq)
-# plotting the data
-plot(break_points, cumulative_freq,
-     xlab="Data Points",
-     ylab="Cumulative Frequency")
-# creating line graph
-lines(break_points, cumulative_freq)
-
-##############################################################################################################
-
-# Assuming your dataframe is called 'df' and the second column is named 'column2'
-# Create breaks for the histogram
-breaks <- seq(0, max(df$V2) + 10, by = 10)
-
-# Plot the histogram
-hist(df$V2, breaks = breaks, main = "Histogram of gene SNPs - all", xlab = "Values", ylab = "Frequency")
-hist(df$V2, breaks = breaks, main = "Histogram of gene SNPs - all", xlab = "Values", ylab = "Frequency", ylim = c(0, 20))
-
-hist(df$V2, breaks = breaks, main = "Histogram of gene SNPs - all", xlab = "Values", ylab = "Frequency", xlim = c(0, 1000), ylim = c(0, 100))
-hist(df$V2, breaks = breaks, main = "Histogram of gene SNPs - all", xlab = "Values", ylab = "Frequency", xlim = c(0, 100), ylim = c(0, 1000))
-
-# Filter values between 1 and 100
-filtered_values <- df$V2[df$V2 >= 1 & df$V2 <= 100]
-
-# Create breaks for the histogram
-breaks <- seq(0, 100, by = 10)
-
-# Plot the histogram
-hist(filtered_values, breaks = breaks, main = "Histogram of gene SNP frequency (Values between 1 and 100)", xlab = "Values", ylab = "Frequency")
-```
-Plot gene length against SNP count
-```bash
-#find gene length:
-cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3
-for line in $(cat gene_snp_report.txt); do
-gene=$(echo $line | cut -d '_' -f1,2,3,4)
-length=$(sed -n '2p' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_${gene}.1_CDS*.fa | wc -c)
-echo ${line},${length} >> gene_snp_report2.txt
-done
-#NOTE: this will find the length of one spliec variant of each gene only
-sed -i 's/_snps.vcf//g' gene_snp_report2.txt
-
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
-
-MYZPE13164_O_EIv2.1_0002220
-MYZPE13164_O_EIv2.1_0037470
-MYZPE13164_O_EIv2.1_0037650
-
-MYZPE13164_O_EIv2.1_0000020,1,1933
-MYZPE13164_O_EIv2.1_0000050,5,3364
-MYZPE13164_O_EIv2.1_0000070,1,853
-```
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Read the main CSV file into a pandas DataFrame
-data = pd.read_csv('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report2.txt', header=None, names=['ID', 'SNPs', 'Length'])
-
-# Read the subset file into a pandas DataFrame
-subset_data = pd.read_csv('/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/effector_candidates.txt', header=None, names=['ID'])
-
-# Filter the main data based on the subset of IDs
-subset_filtered_data = data[data['ID'].isin(subset_data['ID'])]
-
-# Define the bins for histogram
-bins = [0, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56, 61, 66, 71, 76, 81, 86, 91, 96, 101, float('inf')]
-
-# Group data based on bins and count rows in each group for both filtered and original data
-grouped_data = data.groupby(pd.cut(data['SNPs'], bins=bins)).size()
-subset_grouped_data = subset_filtered_data.groupby(pd.cut(subset_filtered_data['SNPs'], bins=bins)).size()
-
-# Plotting the histogram for both original and filtered data
-plt.figure(figsize=(10, 6))
-plt.bar(range(len(grouped_data)), grouped_data, color='skyblue', edgecolor='black', label='All genes with non-synonymous SNPs')
-plt.bar(range(len(subset_grouped_data)), subset_grouped_data, color='orange', edgecolor='black', label='Candidate effector genes with non-synonymous SNPs')
-plt.title('Number of Non-synonymous SNPs per gene')
-plt.xlabel('Number of SNPs')
-plt.ylabel('Number of genes')
-plt.yscale('log')
-plt.xticks(range(len(grouped_data)), [f'{x.left}-{x.right - 1}' if x.right != float('inf') else f'>{x.left - 1}' for x in grouped_data.index], rotation=45)
-plt.legend()
-plt.savefig('Non-synonymousSNPspergenebarplot.png')
-
-
-############################################################################################
-
-# Calculate the new column values based on the formula: 1 - log10(Value2 / Value3)
-data['Ratio'] = data['Length'] / data['SNPs'] 
-
-# Save the updated DataFrame back to the CSV file
-data.to_csv('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report3.txt', index=False, header=False)
-############################################################################################
-
-# Read the main CSV file into a pandas DataFrame
-data = pd.read_csv('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report3.txt', header=None, names=['ID', 'SNPs', 'Length','Ratio'])
-
-# Read the subset file into a pandas DataFrame
-subset_data = pd.read_csv('/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/effector_candidates.txt', header=None, names=['ID'])
-
-# Filter the main data based on the subset of IDs
-subset_filtered_data = data[data['ID'].isin(subset_data['ID'])]
-
-# Define the bins for histogram
-bins = [0, 101, 201, 301, 401, 501, 601, 701, 801, 901, 1001, 1101, 1201, 1301, 1401, 1501, 1601, 1701, 1801, 1901, 2001, 2101, 2201, 2301, 2401, 2501, 2601, 2701, 2801, 2901, 3001, 4001, 5001, 6001, 7001, 8001, float('inf')]
-
-# Group data based on bins and count rows in each group for both filtered and original data
-grouped_data = data.groupby(pd.cut(data['Ratio'], bins=bins)).size()
-subset_grouped_data = subset_filtered_data.groupby(pd.cut(subset_filtered_data['Ratio'], bins=bins)).size()
-
-# Plotting the histogram for both original and filtered data
-plt.figure(figsize=(10, 6))
-plt.bar(range(len(grouped_data)), grouped_data, color='skyblue', edgecolor='black', label='All genes with non-synonymous SNPs')
-plt.bar(range(len(subset_grouped_data)), subset_grouped_data, color='orange', edgecolor='black', label='Candidate effector genes with non-synonymous SNPs')
-plt.title('Number of Non-synonymous SNPs per gene')
-plt.xlabel('Gene Length / Number of SNPs')
-plt.ylabel('Number of genes')
-plt.yscale('log')
-plt.xticks(range(len(grouped_data)), [f'{x.left}-{x.right - 1}' if x.right != float('inf') else f'>{x.left - 1}' for x in grouped_data.index], rotation=45)
-plt.legend()
-plt.savefig('Non-synonymousSNPspergenebarplot-ratio.png')
-
-```
-```python
-import matplotlib.pyplot as plt
-import csv
-import numpy as np  # Import NumPy for log scaling
-
-# Define the CSV file name
-csv_file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report2.txt"
-
-# Define the file containing values to highlight
-highlight_file = "/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/effector_candidates.txt"
-
-# Read the values to highlight from the file
-with open(highlight_file, 'r') as highlight_file:
-    highlight_values = [line.strip() for line in highlight_file]
-
-# Initialize empty lists to store data from the CSV file
-x_values = []
-y_values = []
-filenames = []
-
-# Read data from the CSV file
-with open(csv_file, 'r') as file:
-    csv_reader = csv.reader(file)
-    for row in csv_reader:
-        # Assuming the CSV file format is consistent with the provided example
-        filename, x, y = row
-        filenames.append(filename)
-        x_values.append(int(y))
-        y_values.append(int(x))
-
-# Create a list to hold the colors for each point
-colors = ['red' if filename in highlight_values else 'black' for filename in filenames]
-
-# Create a scatter plot for blue points first (with a size parameter)
-plt.scatter(x_values, y_values, c='black', label='Non-Effector', s=5)
-
-# Create a scatter plot for red points on top (with a size parameter)
-red_indices = [i for i, color in enumerate(colors) if color == 'red']
-plt.scatter([x_values[i] for i in red_indices], [y_values[i] for i in red_indices], c='red', label='Effector candidates', s=5)
-
-# Label the axes
-plt.ylabel("Number of non-synonymous SNPs")
-plt.xlabel("Protein coding length")
-plt.title("Non-synonymous vs CDS length")
-
-# Add a legend to distinguish between highlighted and non-highlighted points
-plt.legend()
-
-# Save the plot as an image file (e.g., PNG)
-plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/non-synonymous-vs-CDS-length.png")
-```
-```python
-import matplotlib.pyplot as plt
-import csv
-import numpy as np  # Import NumPy for log scaling
-
-# Define the CSV file name
-csv_file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report2.txt"
-
-# Define the file containing values to highlight
-highlight_file = "/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/effector_candidates.txt"
-
-# Read the values to highlight from the file
-with open(highlight_file, 'r') as highlight_file:
-    highlight_values = [line.strip() for line in highlight_file]
-
-# Initialize empty lists to store data from the CSV file
-x_values = []
-y_values = []
-filenames = []
-
-# Read data from the CSV file
-with open(csv_file, 'r') as file:
-    csv_reader = csv.reader(file)
-    for row in csv_reader:
-        # Assuming the CSV file format is consistent with the provided example
-        filename, x, y = row
-        filenames.append(filename)
-        x_values.append(int(y))
-        y_values.append(int(x))
-
-# Create a list to hold the colors for each point
-colors = ['red' if filename in highlight_values else 'black' for filename in filenames]
-
-# Create a scatter plot for blue points first (with a size parameter)
-plt.scatter(x_values, y_values, c='black', label='Non-Effector', s=5)
-
-# Create a scatter plot for red points on top (with a size parameter)
-red_indices = [i for i, color in enumerate(colors) if color == 'red']
-plt.scatter([x_values[i] for i in red_indices], [y_values[i] for i in red_indices], c='red', label='Effector candidates', s=5)
-
-# Label the axes
-plt.ylabel("Number of non-synonymous SNPs")
-plt.xlabel("Protein coding length (log scale)")
-plt.title("Non-synonymous vs CDS length")
-
-# Use a log scale for both the x-axis and y-axis
-plt.xscale('log')
-#plt.yscale('log')
-
-# Add a legend to distinguish between highlighted and non-highlighted points
-plt.legend()
-
-# Save the plot as an image file (e.g., PNG)
-plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/non-synonymous-vs-CDS-length2.png")
-```
-```python
-import matplotlib.pyplot as plt
-import csv
-import numpy as np  # Import NumPy for log scaling
-
-# Define the CSV file name
-csv_file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report2.txt"
-
-# Define the file containing values to highlight
-highlight_file = "/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/effector_candidates.txt"
-
-# Read the values to highlight from the file
-with open(highlight_file, 'r') as highlight_file:
-    highlight_values = [line.strip() for line in highlight_file]
-
-# Initialize empty lists to store data from the CSV file
-x_values = []
-y_values = []
-filenames = []
-
-# Read data from the CSV file
-with open(csv_file, 'r') as file:
-    csv_reader = csv.reader(file)
-    for row in csv_reader:
-        # Assuming the CSV file format is consistent with the provided example
-        filename, x, y = row
-        filenames.append(filename)
-        x_values.append(int(y))
-        y_values.append(int(x))
-
-# Create a list to hold the colors for each point
-colors = ['red' if filename in highlight_values else 'black' for filename in filenames]
-
-# Create a scatter plot for blue points first (with a size parameter)
-plt.scatter(x_values, y_values, c='black', label='Non-Effector', s=5)
-
-# Create a scatter plot for red points on top (with a size parameter)
-red_indices = [i for i, color in enumerate(colors) if color == 'red']
-plt.scatter([x_values[i] for i in red_indices], [y_values[i] for i in red_indices], c='red', label='Effector candidates', s=5)
-
-# Label the axes
-plt.ylabel("Number of non-synonymous SNPs (log scale)")
-plt.xlabel("Protein coding length (log scale)")
-plt.title("Non-synonymous vs CDS length")
-
-# Use a log scale for both the x-axis and y-axis
-plt.xscale('log')
-plt.yscale('log')
-
-# Add a legend to distinguish between highlighted and non-highlighted points
-plt.legend()
-
-# Save the plot as an image file (e.g., PNG)
-plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/non-synonymous-vs-CDS-length3.png")
-```
+Extract synonymous SNPs to a seperate .vcf file:
 ```bash
 ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf.gz
 ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.vcf.gz
@@ -1364,6 +1191,7 @@ bgzip /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzu
 cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.ann.vcf | grep 'synonymous_variant\|#' > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-syn.recode.ann.vcf 
 bgzip /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-syn.recode.ann.vcf 
 ```
+Generate a distance matrix from .vcf file, for synonymous SNPs:
 ```bash
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1-nononsyn.recode.vcf.gz); do
 echo $vcf
@@ -1381,8 +1209,11 @@ Outfile=p_dis_193_syn.mat
 sbatch $ProgDir/run_VCF2Dis.sh $vcf $OutDir $Outfile
 done
 #57109676
-
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
+```
+Generate an ID based p-distmat input for R
+```bash
+source package /nbi/software/production/bin/python-2.7.11
+python
 ```
 ```python
 from collections import defaultdict
@@ -1423,6 +1254,7 @@ with open("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling
     for a in acc_order:
         outf.write(",".join([a] + acc[a]) + "\n")
 ```
+Reformat:
 ```python
 import csv
 
@@ -1462,12 +1294,15 @@ convert_to_phylip(distance_matrix, output_file)
 
 exit()
 ```
+#### Splitstree <a name="20"></a>
+
+Construct a phylogenetic network for the samples, based upon the nsynonymous SNP data.
 ```bash
 source package 7654f72b-1692-46bb-9a56-443406d03fd9
 SplitsTree
 ```
-## SNP rarefaction curve
-### Corehunter (redundant)
+## SNP rarefaction curve <a name="21"></a>
+### Corehunter (redundant) <a name="22"></a>
 Run corehunter with 2:209 samples as a proxy for a saturation curve:
 ```bash
 wc -l /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/p_dis_mperc.csv
@@ -1546,10 +1381,7 @@ with open(output_file, 'w') as outf:
 
 print('Done')
 ```
-```bash
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
-```
-```bash
+```python
 #As Excel:
 import sys
 import pandas as pd
@@ -1606,9 +1438,7 @@ rm snp_calling/Myzus/persicae/biello/gatk/corehunter/*_core_sel.csv
 rm snp_calling/Myzus/persicae/biello/gatk/corehunter_193/*_core_sel.csv
 ```
 Collate data from corehunter results
-```bash
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
-```
+
 ```python
 import pandas as pd
 import openpyxl
@@ -1725,8 +1555,8 @@ with open('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling
             print (sum(sampled), len(core), base, len(r_core)) 
 
 ```
-### True Rarefaction curves
-#### Whole genome SNPs
+### True Rarefaction curves <a name="23"></a>
+#### Whole genome SNPs <a name="24"></a>
 Perform rarefaction analysis:
 ```bash
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf);do
@@ -1804,7 +1634,7 @@ plt.tight_layout()
 plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/genome-193-100-193-curve.pdf", bbox_extra_artists=(suptitle,), bbox_inches="tight") 
 plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/genome-193-100-193-curve.png", bbox_extra_artists=(suptitle,), bbox_inches="tight") 
 ```
-#### Genic SNPs
+#### Genic SNPs <a name="25"></a>
 Perform rarefaction analysis:
 ```bash
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz);do
@@ -1893,7 +1723,7 @@ suptitle = plt.suptitle('Comparison of SNP rarefaction curves with 100 reps, ste
 plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/genic+genomic-193-100-193-curve.pdf", bbox_extra_artists=(suptitle,), bbox_inches="tight")
 plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/genic+genomic-193-100-193-curve.png", bbox_extra_artists=(suptitle,), bbox_inches="tight")
 ```
-#### For Bass and JIC samples seperately - Whole genome and genic
+#### For Bass and JIC samples seperately - Whole genome and genic <a name="26"></a>
 
 ```bash
 #High missingness samples:
@@ -2212,7 +2042,7 @@ suptitle = plt.suptitle('Comparison of Bass and JIC percentage SNP rarefaction c
 plt.tight_layout()
 plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/genic+genomic-Bass+JIC-percent-curve-scaled.png", bbox_extra_artists=(suptitle,), bbox_inches="tight")
 ```
-### Fitting a curve
+### Fitting a curve <a name="27"></a>
 ```python
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -2362,83 +2192,8 @@ plt.legend()
 plt.savefig("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/rarefaction/curve_with_asymptote-exponential.png", bbox_inches="tight")
 
 ```
-#### Nei gene diversity
-```bash
-mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/nei
-for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz); do
-    InFile=$vcf
-    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tomF_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/nei
-    OutFile=193s.M_persicae.onlySNPs.tab
-    ProgDir=~/git_repos/Wrappers/NBI
-    sbatch  $ProgDir/run_nei-from-vcf.sh $InFile $OutDir $OutFile
-done
-#54436237
-for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz); do
-    InFile=$vcf
-    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/nei
-    OutFile=193s.M_persicae.onlySNPs-genic-regions.tab
-    ProgDir=~/git_repos/Wrappers/NBI
-    sbatch  $ProgDir/run_nei-from-vcf.sh $InFile $OutDir $OutFile
-done
-#54436239
-for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.vcf.gz); do
-    InFile=$vcf
-    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/nei
-    OutFile=193s.M_persicae.onlySNPs-CDS-regions.tab
-    ProgDir=~/git_repos/Wrappers/NBI
-    sbatch  $ProgDir/run_nei-from-vcf.sh $InFile $OutDir $OutFile
-done
-#56698277
-```
-#### Gemma
-```bash
-perl ~/git_repos/Scripts/NBI/bcf2bbgeno.pl -i /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz -o /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.bbgeno -p H-W -s -r
-cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/
-gzip 193s.M_persicae.onlySNPs-genic-regions.bbgeno
-#57527288
-```
-```bash
-zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz | awk 'BEGIN{OFS="\t"} {if ($3 == ".") $3 = $1"_"$2"_"$5; print}' | gzip > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.vcf.gz
+## vcftools plot of saturation curve <a name="28"></a>
 
-zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.vcf.gz | sed 's/scaffold_//g' | gzip > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.tmp.vcf.gz && mv /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.tmp.vcf.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.mod.vcf.gz
-
-##################################################################################################################
-source package 01ef5a53-c149-4c9e-b07d-0b9a46176cc0
-bgzip -c /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf.gz
-
-zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf.gz | awk 'BEGIN{OFS="\t"} {if ($3 == ".") $3 = $1"_"$2"_"$5; print}' | bgzip -c > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf.gz
-
-#57451298
-
-#there are 360 scaffolds in the assembly, however plink cannot process more than 95 chromosome, therefore will use only the large scaffolds 1-6 for admixture analysis.
-mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2
-zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf.gz | head -n 5 > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf
-zcat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf.gz | grep -w '##ALT\|##INFO\|##FORMAT\|#CHROM\|##bcftools_callVersion\|##bcftools_callCommand\|##bcftools_concatVersion\|##bcftools_concatCommand\|##bcftools_filterVersion\|##bcftools_filterCommand\|##bcftools_viewVersion\|##bcftools_viewCommand\|scaffold_1\|scaffold_2\|scaffold_3\|scaffold_4\|scaffold_5\|scaffold_6' | sed 's@scaffold_@chr@g' >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf
-cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/
-bgzip /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf
-#57451608
-
-source package /nbi/software/testing/bin/plink-1.9 
-plink --vcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.vcf.gz --make-bed --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod
-#57452909
-plink --bfile /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod --genome --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod
-#57501018
-
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
-```
-```python
-import pandas as pd
-import numpy as np
-
-ibd_data = pd.read_csv("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/193s.M_persicae.onlySNPs-mac1.recode.mod.genome", delim_whitespace=True)
-df = ibd_data[['FID1', 'IID1', 'FID2', 'IID2', 'PI_HAT']]
-kinship_matrix = df.pivot_table(values='PI_HAT', index=['FID1', 'IID1'], columns=['FID2', 'IID2']).values
-kinship_matrix = np.nan_to_num(kinship_matrix)
-kinship_matrix -= np.mean(kinship_matrix)
-np.savetxt("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/kinship_matrix.txt", kinship_matrix, fmt='%.6f', delimiter='\t')
-```
-Graphs were plotted in excel
-#### vcftools plot of saturation curve
 ```bash
 gzip -cd snp_calling/Myzus/persicae/biello/gatk/filtered/210s.M_persicae.onlySNPs.vcf.gz | head -n 2000 > temp.vcf
 rm temp.vcf
@@ -2545,699 +2300,89 @@ done
 #54309843, 18.5 hours
 ```
 
+## Nei gene diversity <a name="29"></a>
 
-
-
-
+Calculate Nei's gene diversity
 ```bash
-cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mperc-analysis-jitender/saskia/step-size-one
-
-cp batcher-core-mperc-stepsize-1.py batcher-core-mperc-stepsize-1-2.py
-nano batcher-core-mperc-stepsize-1-2.py
-
-```
-```
-ls step-size-one/
-ALL-BATCH.sh #submits each to HPC
-batcher-core-mperc-stepsize-1.py
-melt-mperc-core-table.py #compling .csv outputs into one
-p_dis_mperc.csv #input
-
-lablab_core_sel_stepsize1.csv #output
-mperc_core_sel_stepsize1.csv
-mperc_core_sel_stepsize1.xlsx
-saturation/
-mperc_core_sel_stepsize1.csv           mperc_core_sel_stepsize1_curve.xlsx
-mperc_core_sel_stepsize1_curve.csv     saturation-curve.py
-
-
-
-ls steps-faster/
-ALL-BATCH.sh       
-batcher-core-mperc-stepsize-1.py                             
-melt-mperc-core-table.py          
-p_dis_mperc.csv  
-
-CORE/
-0_core_sel.csv  style-gen-core-lablab.py 
-
-
-import sys
-import os
-import re
-import itertools
-import glob
-import jitu
-
-```
-
-## Breadth and Depth/Coverage
-Download Singh data:
-```bash
-C:\Users\did23faz\Downloads\sratoolkit.current-win64\sratoolkit.3.0.5-win64\bin>prefetch --max-size 1t --option-file C:\Users\did23faz\Documents\accessions.txt --output-directory \\jic-hpc-data\Group-Scratch\Saskia-Hogenhout\tom_heaven\Aphididae\raw_data\Myzus\persicae\singh\download
-```
-```bash
-cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/singh/download
-nano key.txt #SRR and sample number mapping
-source package /nbi/software/testing/bin/sratoolkit-2.9.0
-
-for dir in $(ls -d *); do
-ID=$(grep $dir key.txt | cut -d $'\t' -f2 | sed 's@S110@NIC_23@g' | sed 's@S111@NIC_410G@g' | sed 's@S106@NIC_5191A@g'| sed 's@S114@NIC_57@g'| sed 's@S115@NIC_8124@g'| sed 's@S112@NIC_926B@g'| sed 's@S105@SUS_4106a@g'| sed 's@S108@SUS_4225A@g'| sed 's@S107@SUS_NS@g'| sed 's@S109@SUS_US1L@g')
-if [ -e ../$ID/qualimap ]; then
-echo $ID
-fastq-dump --split-files --gzip -O ../$ID $dir/*.sra
-else 
-echo $dir
-fi
-done
-
-for file in $(ls ../*/*_1.fastq.gz); do
-echo $file
-SRR=$(echo $file | cut -d '/' -f3 | cut -d '_' -f1)
-rm -r $SRR
-done
-```
-Singh raw data has subsequently been deleted from the HPC save space as it is backed up with NCBI.
-
-```bash
-for sample in $(cat snp_calling/Myzus/persicae/biello/PCA_file_host.csv | grep -v '#' | cut -d ',' -f2); do
-    ls -d raw_data/Myzus/persicae/*/${sample}
-done
-awk '{print $2}' snp_calling/Myzus/persicae/biello/PCA_file_host.csv
-
-
-ls: cannot access raw_data/Myzus/persicae/*/NIC_23: No such file or directory   Italy 14,565,309 SRR13326441, SRR13326434, SRR10199535, SRR10199534
-ls: cannot access raw_data/Myzus/persicae/*/NIC_410G: No such file or directory Greece 16,030,966 SRR10199540, SRR10199536
-ls: cannot access raw_data/Myzus/persicae/*/NIC_57: No such file or directory   Italy  16,512,008 SRR13326441, SRR13326434, SRR10199535, SRR10199534
-ls: cannot access raw_data/Myzus/persicae/*/NIC_8124: No such file or directory Italy 14,252,463 SRR13326441, SRR13326434, SRR10199535, SRR10199534
-ls: cannot access raw_data/Myzus/persicae/*/NIC_926B: No such file or directory Greece 15,408,286 SRR10199540, SRR10199536
-ls: cannot access raw_data/Myzus/persicae/*/NIC_410R: No such file or directory Zimbabwe 15,834,607 SRR10199537
-ls: cannot access raw_data/Myzus/persicae/*/NIC_5191A: No such file or directory    Zimbabwe 39,307,583 SRR10199537
-ls: cannot access raw_data/Myzus/persicae/*/SUS_4106a: No such file or directory    UK 38,838,364 SRR10199546, SRR10199544, SRR10199542
-ls: cannot access raw_data/Myzus/persicae/*/SUS_4225A: No such file or directory  Italy  14,657,289 SRR10199541
-ls: cannot access raw_data/Myzus/persicae/*/SUS_US1L: No such file or directory UK R2=14,445,344 SRR10199546,  SRR10199544, SRR10199542
-ls: cannot access raw_data/Myzus/persicae/*/SUS_1X: No such file or directory   Italy  14,657,289 SRR10199541 > Algeria SRR13326486
-ls: cannot access raw_data/Myzus/persicae/*/SUS_NS: No such file or directory   Germany 15,833,996 SRR10199543
-
-SRR13326486, SRR13326389, SRR13326456, ERX1223986
-
-ls: cannot access raw_data/Myzus/persicae/*/NL_IRS: No such file or directory
-ls: cannot access raw_data/Myzus/persicae/*/NL_WUR: No such file or directory
-
-ls: cannot access raw_data/Myzus/persicae/*/A156: No such file or directory
-
-for sample in $(ls -d raw_data/Myzus/persicae/*/* | rev | cut -d '/' -f1 | rev); do
-x=$(cat snp_calling/Myzus/persicae/biello/PCA_file_host.csv | grep -w "$sample" | cut -d ',' -f2)
-if [ -z "$x" ]; then
-  echo "$sample doesnt exist"
-fi
-done
-
-S100 doesnt exist
-S105 doesnt exist
-S106 doesnt exist
-S107 doesnt exist
-S108 doesnt exist
-S109 doesnt exist
-S110 doesnt exist
-S111 doesnt exist
-S112 doesnt exist
-S114 doesnt exist
-S115 doesnt exist
-S122 doesnt exist
-S21 doesnt exist
-S35 doesnt exist
-S41 doesnt exist
-S82 doesnt exist
-BE2_batch1 doesnt exist
-BE44 doesnt exist
-BE84 doesnt exist
-BE85 doesnt exist
-BE86 doesnt exist
-BE87 doesnt exist
-C11 doesnt exist
-C13 doesnt exist
-C16 doesnt exist
-C18 doesnt exist
-C19 doesnt exist
-C25 doesnt exist
-C4 doesnt exist
-C5 doesnt exist
-ES14 doesnt exist
-FR44 doesnt exist
-FR6 doesnt exist
-FRC09 doesnt exist
-HUN12 doesnt exist
-IT102 doesnt exist
-IT68 doesnt exist
-MISC15 doesnt exist
-MISC18 doesnt exist
-MISC19 doesnt exist
-MISC20 doesnt exist
-MISC21 doesnt exist
-MISC23 doesnt exist
-MISC26 doesnt exist
-NL13 doesnt exist
-NL53 doesnt exist
-RUS14 doesnt exist
-S135 doesnt exist
-S145 doesnt exist
-S258 doesnt exist
-UK32 doesnt exist
-UK35 doesnt exist
-UK37 doesnt exist
-
-du -Lh /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/*.gz | sort -rh | head -n 1
-#21G     /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/wouters/ligustri/M_lig_095_cat_run1_run2_R2_val_2.fq.gz
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/wouters/*); do
-    if [ ! -e ${ReadDir}/qualimap/*genome_results_gff.txt ]; then
-    echo Running for:
-    ls ${ReadDir}/qualimap/*genome_results_gff.txt
-    Fread=$(ls $ReadDir/*_1.fq.gz)
-    Rread=$(ls $ReadDir/*_2.fq.gz)
-    Fread2=$(ls $ReadDir/*_3.fq.gz)
-    Rread2=$(ls $ReadDir/*_4.fq.gz)
-    OutDir=$(echo $ReadDir)
-    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
-    Gff=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/nei
+for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz); do
+    InFile=$vcf
+    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tomF_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/nei
+    OutFile=193s.M_persicae.onlySNPs.tab
     ProgDir=~/git_repos/Wrappers/NBI
-    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
-    echo x
-    while [ $Jobs -gt 19 ]; do
-        sleep 300s
-        printf "."
-        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
-    done
-    echo $ReadDir >> logs/raw_qualimap_report.txt
-    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Gff $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
-    else
-    echo Already Done:
-    ls ${ReadDir}/qualimap/*genome_results.txt
-    fi
+    sbatch  $ProgDir/run_nei-from-vcf.sh $InFile $OutDir $OutFile
 done
-
-source package /tgac/software/testing/bin/seqkit-0.10.0
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*); do
-sample=$(echo $ReadDir | rev | cut -d '/' -f1 | rev)
-coverage=$(grep 'mean coverageData' $ReadDir/qualimap/*genome_results.txt | rev | cut -d ' ' -f1 | rev | sed 's@X@@g')
-if (( $(echo "$coverage < 15" | bc -l) )); then
-    echo $sample has low coverage: $coverage >> Reports/Low_coverage_report2.txt
-fi
-target_coverage=15
-subsampling_ratio=$(bc <<< "scale=2; $target_coverage / $coverage")
-for reads in $(ls $ReadDir/*.fq.gz); do
-OutFile=$(basename $reads | cut -d '.' -f1)_subsampled.fq.gz
-OutDir=${ReadDir}/subsampled
-OutDir2=/jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/M_persicae/${sample}
-mkdir $OutDir
-mkdir $OutDir2
-echo $sample raw reads have average coverage of ${coverage}, these were subsampled with ratio $subsampling_ratio >> Reports/Subsampling_report.txt
-seqkit sample -s 1234 -p $subsampling_ratio -o ${OutDir2}/${OutFile} $reads
-ln -s ${OutDir2}/${OutFile} ${OutDir}/${OutFile}
-done
-if [ -e ${OutDir2}/${OutFile} ]; then
-    echo ${sample} Done
-#rm -r /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/M_persicae_Bass_SRA/$sample
-else 
-rm ${OutDir}/*_subsampled.fq.gz
-for reads in $(ls $ReadDir/*.fq.gz); do
-name=$(echo $reads | rev | cut -d '/' -f1 | rev)
-cp $reads ${OutDir2}/${name}
-ln -s ${OutDir2}/${name} ${OutDir}/${name}
-#rm -r /jic/research-groups/Saskia-Hogenhout/TCHeaven/Raw_Data/M_persicae_Bass_SRA/$sample
-done
-fi
-done
-#NOTE: some samples used in the final SNP calling analysis have low coverage
-
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
-    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
-    echo Running for:
-    ls ${ReadDir}/qualimap/*genome_results.txt
-    Fread=$(ls $ReadDir/*_1*fq.gz)
-    Rread=$(ls $ReadDir/*_2*fq.gz)
-    Fread2=$(ls $ReadDir/*_3*fq.gz)
-    Rread2=$(ls $ReadDir/*_4*fq.gz)
-    OutDir=$(echo $ReadDir)
-    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
+#54436237
+for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-genic-regions.vcf.gz); do
+    InFile=$vcf
+    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/nei
+    OutFile=193s.M_persicae.onlySNPs-genic-regions.tab
     ProgDir=~/git_repos/Wrappers/NBI
-    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
-    echo x
-    while [ $Jobs -gt 19 ]; do
-        sleep 300s
-        printf "."
-        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
-    done
-    echo $ReadDir >> logs/raw_qualimap_report.txt
-    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
-    else
-    echo Already Done:
-    ls ${ReadDir}/qualimap/*genome_results.txt
-    fi
+    sbatch  $ProgDir/run_nei-from-vcf.sh $InFile $OutDir $OutFile
 done
-
-for sample in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled/qualimap/*genome_results.txt); do
-cov=$(grep 'mean coverageData' $sample | rev | cut -d ' ' -f1 | rev )
-name=$(echo $sample | cut -d '/' -f12)
-echo $name $cov
-done
-
-#NOTE: to save space the script has been edited to delete input files upon production of outputs.
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
-    sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
-    Fread=$(ls $ReadDir/*_1*fq.gz)
-    Rread=$(ls $ReadDir/*_2*fq.gz)
-    Fread2=$(ls $ReadDir/*_3*fq.gz)
-    Rread2=$(ls $ReadDir/*_4*fq.gz)
-    OutDir=/jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}
-    OutFile=${sample}_subsampled_trimmed
-    Quality=20
-    Length=50
+#54436239
+for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions.recode.vcf.gz); do
+    InFile=$vcf
+    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/nei
+    OutFile=193s.M_persicae.onlySNPs-CDS-regions.tab
     ProgDir=~/git_repos/Wrappers/NBI
-    Jobs=$(squeue -u did23faz| grep 'trim_g'  | wc -l)
-    echo x
-    while [ $Jobs -gt 19 ]; do
-        sleep 300s
-        printf "."
-        Jobs=$(squeue -u did23faz| grep 'trim_g'  | wc -l)
-    done
-    mkdir -p $OutDir
-    echo $sample >> logs/trim_galore_report.txt
-    sbatch $ProgDir/run_trim_galore.sh $OutDir $OutFile $Quality $Length $Fread $Rread $Fread2 $Rread2  2>&1 >> logs/trim_galore_report.txt
-done 
-
-if [ -e ${OutDir}/${OutFile}_1.fq.gz ] && [ -e ${OutDir}/${OutFile}_2.fq.gz ]; then
-echo Outputs detected
-else
-echo Outputs not detected
-fi
-#Subsampled Trimmed read files have been deleted following successful generation of mitochondrial VCF file, can be regenertated from raw data if needed.
-
-#Symlink files to the main Aphididae directory
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*/subsampled); do
-    sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
-    Dir=/jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}
-    OutDir=$(echo $ReadDir | sed 's@raw_data@dna_qc@g')/trim_galore
-    mkdir -p $OutDir
-    ln -s /jic/research-groups/Saskia-Hogenhout/TCHeaven/dna_qc/M_persicae/${sample}/* $OutDir/.
+    sbatch  $ProgDir/run_nei-from-vcf.sh $InFile $OutDir $OutFile
 done
-
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore); do
-    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
-    echo Running for:
-    ls ${ReadDir}/qualimap/*genome_results.txt
-    Fread=$(ls $ReadDir/*_1*fq.gz)
-    Rread=$(ls $ReadDir/*_2*fq.gz)
-    Fread2=$(ls $ReadDir/*_3*fq.gz)
-    Rread2=$(ls $ReadDir/*_4*fq.gz)
-    OutDir=$(echo $ReadDir)
-    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
-    ProgDir=~/git_repos/Wrappers/NBI
-    Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
-    echo x
-    while [ $Jobs -gt 19 ]; do
-        sleep 300s
-        printf "."
-        Jobs=$(squeue -u did23faz| grep 'qualimap'  | wc -l)
-    done
-    echo $ReadDir >> logs/raw_qualimap_report.txt
-    sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_qualimap_report.txt
-    else
-    echo Already Done:
-    ls ${ReadDir}/qualimap/*genome_results.txt
-    fi
-done
-
-for sample in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore/qualimap/*genome_results.txt); do
-cov=$(grep 'mean coverageData' $sample | rev | cut -d ' ' -f1 | rev )
-name=$(echo $sample | cut -d '/' -f12)
-echo $name $cov
-done
+#56698277
 ```
-MOVE FILES FROM /jic/research-groups/Saskia-Hogenhout/ TO /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae AS THIS IS THE CHEAP SPACE:
+## Check for SNPs of clone O versus itself to control for diploidy <a name="30"></a>
 
-
-The M. persicae mitochondrial reference genome was downloaded from NCBI (Accession: NC_029727).
-
-Reads were aligned to the mitochondrial reference genome:
 ```bash
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore); do
-    Reference=/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/mito/Wang2016_NC_029727.fasta
-    Fread=$(ls $ReadDir/*_1*fq.gz)
-    Rread=$(ls $ReadDir/*_2*fq.gz)
-    OutDir=$(echo $ReadDir | sed 's@subsampled/trim_galore@bwa@g' | sed 's@dna_qc@alignment@g' | sed 's@persicae@persicae/SNPs/mito@g')
-    OutFile=$(echo $ReadDir | cut -d '/' -f11,12 | sed 's@/@_@g')_mito
-    echo ${OutDir}/${OutFile}
-    ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-    Jobs=$(squeue -u did23faz| grep 'bwa'  | wc -l)
-    echo x
-    while [ $Jobs -gt 9 ]; do
-        sleep 300s
-        printf "."
-        Jobs=$(squeue -u did23faz| grep 'bwa'  | wc -l)
-    done
-    mkdir -p $OutDir    
-    sbatch $ProgDir/bwa-mem.sh $OutDir $OutFile $Reference $Fread $Rread 
-done 
-```
-FYI, Reads previously aligned to the nuclear genome by Roland are here, I do not have the permissions to symlink them into my file system:
-```bash
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/*/*/subsampled/trim_galore); do
-    isolate=$(echo $ReadDir | cut -d '/' -f12)
-    isolates=$(echo $ReadDir | cut -d '/' -f11,12)
-    echo $isolates
-    OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/genomic/${isolates}
-    mkdir -p $OutDir
-    ln -s /jic/scratch/groups/Saskia-Hogenhout/roland/Myzus_periscae_popgen/Output/realigned_BAM_files/${isolate}.sorted.mark_dups.realigned.bam ${Outdir}/${isolate}.sorted.mark_dups.realigned.bam
-    ln -s /jic/scratch/groups/Saskia-Hogenhout/roland/Myzus_periscae_popgen/Output/realigned_BAM_files/${isolate}.sorted.mark_dups.realigned.bam.bai ${Outdir}/${isolate}.sorted.mark_dups.realigned.bam.bai
-    ln -s /jic/scratch/groups/Saskia-Hogenhout/roland/Myzus_periscae_popgen/Output/realigned_BAM_files/${isolate}.sorted.mark_dups.realigned_stats ${Outdir}/${isolate}.sorted.mark_dups.realigned_stats
-done
-```
-Files were sorted by scaffold and coordinate level, duplicates were marked and removed and the files were re-indexed:
-NOTE: this script does not remove the input file and .bam files take up a lot of space - was therefore actually run 1 step at a time
-```bash
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/mito/*/*/bwa/*_mito.bam); do
-ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-sbatch $ProgDir/run_sort_bam.sh $file
-done 
-
-#Input files were subsequently deleted to save space
-```
-GATK
-```bash
-#The mitochondrial reference genome was indexed:
-interactive
-source switch-institute ei
-source package 638df626-d658-40aa-80e5-14a275b7464b
-source pilon-1.22
-source package /tgac/software/testing/bin/picardtools-2.1.1
-cd /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/mito
-java -jar /tgac/software/testing/bin/core/../..//picardtools/2.1.1/x86_64/bin/picard.jar CreateSequenceDictionary R=Wang2016_NC_029727.fasta O=Wang2016_NC_029727.dict
-samtools faidx Wang2016_NC_029727.fasta
-
-#GATK was used to perform indel realignment:
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/mito/*/*/bwa/*MarkDups.bam); do
-Reference=/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/mito/Wang2016_NC_029727.fasta
-ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-sbatch $ProgDir/run_realign.sh $file $Reference 
-done #56494561-56494688
-```
-Combined into a .vcf and called variants with bcftools:
-```bash
-source package 638df626-d658-40aa-80e5-14a275b7464b
-ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/mito/*/*/bwa/*realigned.bam > bamlist.txt
-bcftools mpileup -b /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/bamlist.txt --annotate AD,DP --fasta-ref /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/mito/Wang2016_NC_029727.fasta -O z -o /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255s.M_persicae.mito.vcf.gz
-sbatch $ProgDir/temp.sh #56496243, 56496558
-
-cp bamlist.txt bamlist2.txt
-nano bamlist2.txt #edit to keep 193 samples only #NOTE: SUS_USIL is missing, so there are 192 samples
-bcftools mpileup -b /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/bamlist2.txt --annotate AD,DP --fasta-ref /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/mito/Wang2016_NC_029727.fasta -O z -o /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192s.M_persicae.mito.vcf.gz
-sbatch $ProgDir/temp.sh #56609348
-
-source package 638df626-d658-40aa-80e5-14a275b7464b
-bcftools call -Oz -v -m -o /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255.M_persicae.mito.vcf.gz /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255s.M_persicae.mito.vcf.gz
-bcftools call -Oz -v -m -o /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192.M_persicae.mito.vcf.gz /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192s.M_persicae.mito.vcf.gz
-bcftools call --ploidy 1 -Oz -v -m -o /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255.M_persicae.mito_hap.vcf.gz /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255s.M_persicae.mito.vcf.gz
-bcftools call --ploidy 1 -Oz -v -m -o /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192.M_persicae.mito_hap.vcf.gz /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192s.M_persicae.mito.vcf.gz
-sbatch $ProgDir/temp.sh #56624720, 56626500, 56627364 (haploid calls)
-
-bgzip -cd /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255.M_persicae.mito.vcf.gz | grep -v '#' | wc -l #4,165
-bgzip -cd /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192.M_persicae.mito.vcf.gz | grep -v '#' | wc -l #603
-
-#bam files were subsequently removed to save space
-```
-Filtering:
-
-I have not done mappability masking for the SNPs, the programs used to do this with the nuclear SNPs do not seem to be installed on the JIC HPC, given that these SNPs are called against only the ~17.5k bp mitochondrial genome which is not expected to have lengthy repetative regions it does not seem worth it to install new software to perform this analysis.
-```bash
-#Keep only samples that were in the filtered nuclear SNPs .vcf:
-bgzip -cd /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255.M_persicae.mito.vcf.gz > 255.M_persicae.mito.vcf
-bgzip -cd /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/255.M_persicae.mito_hap.vcf.gz > 255.M_persicae.mito_hap.vcf
-sed -i 's/singh_//g' 255.M_persicae.mito.vcf
-sed -i 's/wouters_//g' 255.M_persicae.mito.vcf
-sed -i 's/singh_//g' 255.M_persicae.mito_hap.vcf
-sed -i 's/wouters_//g' 255.M_persicae.mito_hap.vcf
-patterns=("CHROM" "POS" "ID" "REF" "ALT" "QUAL" "FILTER" "INFO" "FORMAT" "K43" "K40" "A166" "I1" "K16" "A102" "NL1" "Q1200" "S2B01" "S2196G" "NL21" "S152" "S232" "UKW3" "NL5" "UK2" "S204" "A138" "Crespys" "S472" "S196" "MG1107" "S481" "Lierida" "ES01" "Generac" "FR15" "MISC5" "MISC10" "MISC14" "ES149" "MISC81" "ES146" "MISC48" "BE1" "ES92" "MISC34" "MISC27" "MISC46" "MISC42" "UK21" "MISC51" "MISC56" "K66" "MISC33" "MISC30" "MISC28" "MISC31" "BE23" "MISC53" "MISC4" "MISC38" "BE2_batch2" "ES88" "BE6" "K88" "UK25" "K87" "FR433" "a456BE" "MISC79" "MISC64" "MISC76" "MISC67" "BE49" "MISC65" "NL93" "MISC60" "UK1" "BE33A" "MISC78" "A161" "MISC69" "UK19" "NL_IRS" "NL_WUR" "SUS_4106a" "23" "4106a" "FRC" "G006" "NIC_410G" "NIC_410R" "NIC_5191A" "NIC_57" "NIC_8124" "NIC_926B" "O" "SUS_1X" "SUS_4225A" "SUS_NS" "SUS_US1L" "UKSB" "US1L" "S2" "S14" "S3" "S17" "S18" "S5" "S4" "S19" "S6" "S7" "S20" "S11" "S23" "S1" "S9" "S16" "S8" "S22" "S15" "S12" "S13" "S28" "S10" "S25" "S27" "S29" "S24" "S33" "S36" "S34" "S26" "S37" "S38" "S30" "S39" "S51" "S32" "S42" "S43" "S31" "S48" "S45" "S50" "S40" "S44" "S46" "S49" "S59" "S47" "S53" "S52" "S56" "S60" "S54" "S64" "S62" "S57" "S63" "S66" "S70" "S58" "S68" "S72" "S61" "S71" "S74" "S73" "S65" "S69" "S76" "S78" "S67" "S77" "S80" "S79" "S86" "S75" "S88" "S101" "S89" "S87" "S85" "S96" "S84" "S118" "S81" "S93" "S91" "S94" "S90" "S125" "S83" "S92" "S124" "S120" "S121" "S113" "S117" "HFH5FBCX2")
-#^samples to keep added to keep.txt
 source package /nbi/software/testing/bin/vcftools-0.1.15
-source package /tgac/software/testing/bin/bcftools-1.9
-vcftools --keep keep.txt --vcf 255.M_persicae.mito.vcf --mac 1 --recode --recode-INFO-all --out temp193 #After filtering, kept 571 out of a possible 4165 Sites, After filtering, kept 193 out of 255 Individuals
-nano temp193.recode.vcf #edit wouters samples with same names as singh samples to be unique
-vcftools --vcf temp193.recode.vcf --remove-indels --mac 1 --recode --recode-INFO-all --out temp193_2 #After filtering, kept 549 out of a possible 571 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193.recode.vcf --remove-indels --max-alleles 2 --mac 1 --recode --recode-INFO-all --out temp193_2 #After filtering, kept 541 out of a possible 571 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --recode --recode-INFO-all --out temp193_2 #After filtering, kept 536 out of a possible 571 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --recode --recode-INFO-all --out temp193_2 #After filtering, kept 496 out of a possible 571 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 5 --recode --recode-INFO-all --out temp193_2 #After filtering, kept 493 out of a possible 571 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 5 --min-meanDP 5 --recode --recode-INFO-all --out temp193_2 #After filtering, kept 493 out of a possible 571 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 5 --min-meanDP 5 --maxDP 40 --recode --recode-INFO-all --out temp193_2 #After filtering, kept 0 out of a possible 571 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 5 --min-meanDP 5 --max-meanDP 300 --recode --recode-INFO-all --out temp193_2 #After filtering, kept 8 out of a possible 571 Sites, After filtering, kept 193 out of 193 Individuals -> most site have very high depth coverage
-bcftools query -f '%CHROM\t%POS\t%INFO/DP[\t%DP]\n' temp193.recode.vcf > ../temp.tsv
-vcftools --vcf temp193.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 10 --min-meanDP 40 --maxDP 500 --max-meanDP 300 --recode --recode-INFO-all --out /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192s.M_persicae.mito #After filtering, kept 490 out of a possible 571 Sites, and kept 193 out of 193 Individuals
+vcftools --gzvcf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz --indv O --counts
+grep -v "^#" out.frq.count| cut -f3 | grep -cv "0"
 
-vcftools --keep keep.txt --vcf 255.M_persicae.mito_hap.vcf --mac 1 --recode --recode-INFO-all --out temp193_hap #After filtering, kept 165 out of a possible 3709 Sites, After filtering, kept 193 out of 255 Individuals
-nano temp193_hap.recode.vcf #edit wouters samples with same names as singh samples to be unique
-vcftools --vcf temp193_hap.recode.vcf --remove-indels --mac 1 --recode --recode-INFO-all --out temp193_hap_2 #After filtering, kept 146 out of a possible 165 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193_hap.recode.vcf --remove-indels --max-alleles 2 --mac 1 --recode --recode-INFO-all --out temp193_hap #After filtering, kept 145 out of a possible 165 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193_hap.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --recode --recode-INFO-all --out temp193_hap_2 #After filtering, kept 140 out of a possible 165 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193_hap.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --recode --recode-INFO-all --out temp193_hap_2 #After filtering, kept 133 out of a possible 165 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193_hap.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 5 --recode --recode-INFO-all --out temp193_hap_2 #After filtering, kept 130 out of a possible 165 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193_hap.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 5 --min-meanDP 5 --recode --recode-INFO-all --out temp193_hap_2 #After filtering, kept 130 out of a possible 165 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193_hap.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 5 --min-meanDP 5 --maxDP 40 --recode --recode-INFO-all --out temp193_hap_2 #After filtering, kept 0 out of a possible 165 Sites, After filtering, kept 193 out of 193 Individuals
-vcftools --vcf temp193_hap.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 10 --min-meanDP 40 --maxDP 500 --max-meanDP 300 --recode --recode-INFO-all --out /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192s.M_persicae.mito_hap #After filtering, kept 129 out of a possible 165 Sites, and kept 193 out of 193 Individuals 
-
-bgzip /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192s.M_persicae.mito.recode.vcf
-bgzip /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/192s.M_persicae.mito_hap.recode.vcf
-
-#remove g006 from analysis:
-vcftools --keep keep2.txt --vcf 255.M_persicae.mito_hap.vcf --mac 1 --recode --recode-INFO-all --out temp192_hap #After filtering, kept 165 out of a possible 3709 Sites, After filtering, kept 192 out of 255 Individuals
-nano temp192_hap.recode.vcf #edit wouters samples with same names as singh samples to be unique
-vcftools --vcf temp192_hap.recode.vcf --remove-indels --max-alleles 2 --mac 1 --max-missing 0.9 --minQ 30 --minDP 10 --min-meanDP 40 --maxDP 500 --max-meanDP 300 --recode --recode-INFO-all --out /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/191s.M_persicae.mito_hap #After filtering, kept 129 out of a possible 165 Sites, and kept 192 out of 192 Individuals 
-bgzip /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/191s.M_persicae.mito_hap.recode.vcf
+source package /nbi/software/testing/bin/bcftools-1.8
+bcftools view -c1 -s O -Ou /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz | bcftools query -e 'REF=ALT' -f '%CHROM\t%POS\n' | wc -l
+#272,953
 ```
+Remove SNPs that also occu between clone O and itself:
 ```bash
-for vcf in $(ls /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/191s.M_persicae.mito_hap.recode.vcf.gz); do
-echo $vcf
-ProgDir=~/git_repos/Wrappers/NBI
-OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance
-Outfile=mito_p_dis_-g006.mat
-sbatch $ProgDir/run_VCF2Dis.sh $vcf $OutDir $Outfile
-done #56651077, 56651731
-
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3
+bcftools view -c1 -s O -Ou /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz | bcftools query -e 'REF=ALT' -f '%CHROM\t%POS\n' > temp.vcf
+source package 01ef5a53-c149-4c9e-b07d-0b9a46176cc0
+bgzip -cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz > 193s.M_persicae.onlySNPs.vcf
 ```
 ```python
-from collections import defaultdict
-# load distance matrix
-acc = defaultdict(list)
-acc_order = []
-with open('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/mito_p_dis_-g006.mat') as inp:
-    next(inp)
-    for line in inp:
-        A = line.strip().split()
-        acc[A[0]] = A[1:]
-        acc_order.append(A[0])
+# Read the first file and store the values in a set
+first_file_lines = set()
+with open('temp.vcf', 'r') as f1:
+    for line in f1:
+        columns = line.strip().split('\t')
+        if len(columns) >= 2:
+            first_file_lines.add((columns[0], columns[1]))
 
-assert len(acc) == 193
+# Read the second file and write lines that don't match the criteria to a new file
+with open('193s.M_persicae.onlySNPs.vcf', 'r') as f2, open('192s.M_persicae.onlySNPs.vcf', 'w') as output:
+    for line in f2:
+        columns = line.strip().split('\t')
+        if len(columns) >= 2 and (columns[0], columns[1]) not in first_file_lines:
+            output.write(line)
 
-# write the distance matrix in a desired format
-with open("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/mito_p_dis_-g006.csv", "w") as outf:
-    outf.write(",".join(["ID"] + acc_order) + "\n")
-    for a in acc_order:
-        outf.write(",".join([a] + acc[a]) + "\n")
-```
-```python
-import csv
-
-def read_distance_matrix_from_csv(csv_file):
-    distance_matrix = {}
-    with open(csv_file, 'r') as f:
-        reader = csv.DictReader(f)
-        taxa_names = reader.fieldnames[1:]
-        for row in reader:
-            taxon = row['ID']
-            distances = {taxa_names[i]: float(row[taxa_names[i]]) for i in range(len(taxa_names))}
-            distance_matrix[taxon] = distances
-    return distance_matrix
-
-def convert_to_phylip(distance_matrix, output_file):
-    num_taxa = len(distance_matrix)
-    taxa_names = list(distance_matrix.keys())
-    with open(output_file, 'w') as f:
-        f.write(str(num_taxa) + '\n')
-        for i in range(num_taxa):
-            taxon_distances = []
-            for j in range(num_taxa):
-                taxon_distances.append(str(distance_matrix[taxa_names[i]][taxa_names[j]]))
-            f.write(taxa_names[i] + '\t' + '\t'.join(taxon_distances) + '\n')
-
-# Example usage:
-csv_file = '/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/mito_p_dis_-g006.csv'
-output_file = '/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/p_distance/mito_p_dis_-g006.dist'
-
-distance_matrix = read_distance_matrix_from_csv(csv_file)
-convert_to_phylip(distance_matrix, output_file)
+exit()
 ```
 ```bash
-source package 7654f72b-1692-46bb-9a56-443406d03fd9
-SplitsTree
-#Import failed: unknown format or error in file (eg. illegal characters or multiple occurrences of same taxon name)
-#NOTE: G006 is triggering the above error, the mitochondrial sequence used as reference is from G006 -> there are therefore no SNPs for this sample causing the error? G006 was therefore reomved during filtering
+grep '#' 193s.M_persicae.onlySNPs.vcf >> 193s-no0.M_persicae.onlySNPs.vcf
+grep -v '#' 192s.M_persicae.onlySNPs.vcf >> 193s-no0.M_persicae.onlySNPs.vcf
+rm 192s.M_persicae.onlySNPs.vcf 193s.M_persicae.onlySNPs.vcf
+bgzip 193s-no0.M_persicae.onlySNPs.vcf
+mv 193s-no0.M_persicae.onlySNPs.vcf.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/.
+
+
+bcftools view -s O -Ou /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz | bcftools query -e 'REF=ALT' -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\t%INFO\t%FORMAT\t%O[\t]\n' > temp.vcf
+bcftools query -f '%CHROM\t%POS\n' -i 'ALT!="."' -s O /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz > snps_to_remove.txt
+source package 01ef5a53-c149-4c9e-b07d-0b9a46176cc0
+bgzip -cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs.vcf.gz > 193s.M_persicae.onlySNPs.vcf
+bcftools view -s O -v snps -f 'GT="0/0"' 193s.M_persicae.onlySNPs.vcf > filtered_file.vcf
+rm 193s.M_persicae.onlySNPs.vcf
+bgzip filtered_file.vcf
+tabix -p vcf filtered_file.vcf.gz
 ```
 
-```bash
-rm /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/mito/*/*/bwa/*.sam
-#################################################################################################
-
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/mito/*/*/bwa/*_mito_sorted.bam); do
-OutFile=/jic/research-groups/Saskia-Hogenhout/TCHeaven/temp/$(basename $file | sed 's@_mito_sorted.bam@_mitochondrial_sorted_MarkDups.bam@g')
-if [ ! -e $OutFile ]; then
-echo $OutFile
-ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-sbatch $ProgDir/temp.sh $file
-else
-echo $OutFile exists
-fi
-done
-
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/mito/*/*/bwa/*_mito.bam); do
-ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI
-sbatch $ProgDir/run_sort_bam.sh $file
-done 
-
-interactive
-source package 638df626-d658-40aa-80e5-14a275b7464b
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/mito/*/*/bwa/*_mito.bam); do
-name=$(basename $file | cut -d '.' -f1)
-OutDir=$(dirname $file)
-samtools sort -o ${OutDir}/${name}_sorted.sam -T ${name}_1234 $file
-samtools view -bS ${OutDir}/${name}_sorted.sam > ${OutDir}/${name}_sorted.bam
-rm ${OutDir}/${name}_sorted.sam
-rm $file
-done
-
-source switch-institute ei
-source pilon-1.22
-source package /tgac/software/testing/bin/picardtools-2.1.1
-
-for file in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/SNPs/mito/*/*/bwa/*_sorted.bam); do
-OutDir=$(dirname $file)
-OutFile=$(basename $file | sed 's@mito@mitochondrial@g')
-java -jar /tgac/software/testing/bin/core/../..//picardtools/2.1.1/x86_64/bin/picard.jar SortSam I=$file O=${OutDir}/${OutFile} SORT_ORDER=coordinate
-if [ -e ${OutDir}/${OutFile} ]; then
-rm $file
-else
-echo Output missing
-fi
-done
-
-#!/bin/bash
-#SBATCH --job-name=bam_sort
-#SBATCH -o slurm.%j.out
-#SBATCH -e slurm.%j.err
-#SBATCH --mem-per-cpu=2G
-#SBATCH --cpus-per-task=1
-#SBATCH -p jic-medium,nbi-medium
-#SBATCH --time=02-00:00
-
-#Collect inputs
-CurPath=$PWD
-WorkDir=$PWD${TMPDIR}_${SLURM_JOB_ID}
-InFile=$1
-
-echo CurPth:
-echo $CurPath
-echo WorkDir:
-echo $WorkDir
-echo InFile:
-echo $InFile
-
-source switch-institute ei
-source package 638df626-d658-40aa-80e5-14a275b7464b
-source pilon-1.22
-source package /tgac/software/testing/bin/picardtools-2.1.1
-
-name=$(basename $InFile | cut -d '.' -f1)
-OutDir=$(dirname $InFile)
-samtools sort -o ${OutDir}/${name}_sorted.sam -T ${name}_1234 $file
-samtools view -bS ${OutDir}/${name}_sorted.sam > ${OutDir}/${name}_sorted.bam
-if [ -e ${OutDir}/${name}_sorted.bam ]; then
-rm ${OutDir}/${name}_sorted.sam
-rm $InFile
-else
-echo Output missing
-fi
 
 
-OutFile=$(basename ${OutDir}/${name}_sorted.bam | sed 's@mito@mitochondrial@g')
-java -jar /tgac/software/testing/bin/core/../..//picardtools/2.1.1/x86_64/bin/picard.jar SortSam I=${OutDir}/${name}_sorted.bam O=${OutDir}/${OutFile} SORT_ORDER=coordinate
-if [ -e ${OutDir}/${OutFile} ]; then
-rm ${OutDir}/${name}_sorted.bam
-else
-echo Output2 missing
-fi
 
-OutFile2=$(echo ${OutDir}/${OutFile} | sed 's@.bam@_MarkDups.bam@g')
-java -jar /tgac/software/testing/bin/core/../..//picardtools/2.1.1/x86_64/bin/picard.jar MarkDuplicates I=${OutDir}/${OutFile} O=${OutFile2} -M ${OutDir}/${name}_marked_dup_metrics.txt
-if [ -e ${OutFile2} ]; then
-rm ${OutDir}/${OutFile}
-else
-echo Output3 missing
-fi
-
-cd ${OutDir}
-samtools index ${OutFile2}
-
-echo DONE
-
-```
-#### Mitochondrial blast
-```bash
-source package d6092385-3a81-49d9-b044-8ffb85d0c446
-mkdir M_persicae_mitochondria_blast_db/
-cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mito1.fasta /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mito2.fasta /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mito3.fasta /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mito4.fasta > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mito.fasta
-makeblastdb -in /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/mito.fasta -dbtype nucl -parse_seqids -out M_persicae_mitochondria_blast_db/blast_db
-blastn -query /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa -db M_persicae_mitochondria_blast_db/blast_db -out results.txt -evalue 1e-5 -outfmt 6 -num_threads 1
-
-```
-#### Extract CathB SNPs
-```bash
-head -n 396 /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf > CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_1" && $2 >= 17900000 && $2 <= 17960000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_1" && $2 >= 66140000 && $2 <= 66170000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_1" && $2 >= 90330000 && $2 <= 90360000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_1" && $2 >= 98550000 && $2 <= 98700000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_2" && $2 >= 36300000 && $2 <= 36350000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_2" && $2 >= 57500000 && $2 <= 57540000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_2" && $2 >= 66850000 && $2 <= 66900000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_4" && $2 >= 8200000 && $2 <= 8250000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_4" && $2 >= 12550000 && $2 <= 12630000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_4" && $2 >= 47700000 && $2 <= 47850000' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-awk -F '\t' '$1 == "scaffold_134"' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-mac1.recode.vcf >> CathB_snps.vcf
-```
-```bash
-for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/raw_data/Myzus/persicae/*/*); do
-    if [ ! -e ${ReadDir}/qualimap/*genome_results.txt ]; then
-    echo Running for:
-    ls ${ReadDir}/qualimap/*genome_results.txt
-    Fread=$(ls $ReadDir/*_1.fq.gz)
-    Rread=$(ls $ReadDir/*_2.fq.gz)
-    Fread2=$(ls $ReadDir/*_3.fq.gz)
-    Rread2=$(ls $ReadDir/*_4.fq.gz)
-    OutDir=$(echo $ReadDir)
-    Reference_genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa
-    ProgDir=~/git_repos/Wrappers/NBI
-    Jobs=$(squeue -u did23faz| grep 'bwa'  | wc -l)
-    echo x
-    while [ $Jobs -gt 19 ]; do
-        sleep 300s
-        printf "."
-        Jobs=$(squeue -u did23faz| grep 'bwa'  | wc -l)
-    done
-    echo $ReadDir >> logs/raw_bwamem_report.txt
-    sbatch $ProgDir/run_bwa-mem.sh $OutDir $Reference_genome $Fread $Rread $Fread2 $Rread2 2>&1 >> logs/raw_bwamem_report.txt
-    else
-    echo Already Done:
-    ls ${ReadDir}/qualimap/*genome_results.txt
-    fi
-done
-```
