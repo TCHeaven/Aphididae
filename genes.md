@@ -2,11 +2,11 @@
 
 ## Contents
 
-1.[SWeeD](#2)
-2.[admixture](#3)
-3.[STRUCTURE](#4)
-4.[FST](#5)
-5.[Gemma](#7)
+1. [SWeeD](#2)
+2. [admixture](#3)
+3. [STRUCTURE](#4)
+4. [FST](#5)
+5. [Gemma](#7)
 
 #### SWeeD <a name="2"></a>
 

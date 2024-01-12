@@ -4,8 +4,8 @@ Contains analysis of genes using the M. persicae population data
 
 ## Contents
 1. [Non-synonymous genes](#0)
-    1.1 [Investigate genes with non-synonymous SNPs in them](#1)
-        1.2 [Extract CathB SNPs](#2)
+    1. [Investigate genes with non-synonymous SNPs in them](#1)
+        1. [Extract CathB SNPs](#2)
 2. [Extract gene sequences](#3)
     1. [Separate SNP data for each gene in the M. persicae genome](#4)
         1. [The entire gene region](#5)
