@@ -3,9 +3,7 @@
 Contains analysis of the 3 host swap experiment performed by M. Gravino and others
 
 ## Contents
-
 1. [Collect data](#1)
-
 2. [Check mutations in the aphid genomes over the course of the experiment with WGS](#2)
     1. [QC](#3)
         1. [fastqc and qualimap](#4)
@@ -18,7 +16,6 @@ Contains analysis of the 3 host swap experiment performed by M. Gravino and othe
         1. [Genmap filter for genome mappability](#11)
         2. [Filter samples for missingness](#12)
         3. [Filter for SNP quality](#13)
-
 3. [Check for epigenetic changes over the course of the experiment with WGBS](#14)
     1. [fastqc and qualimap](#15)
     2. [Trimming](#16)
@@ -33,7 +30,6 @@ Contains analysis of the 3 host swap experiment performed by M. Gravino and othe
         4. [Genomation](#25)
         5. [Sliding window](#26)
     5. [Custom](#27)
-
 4. [Check for transcriptional changes over the course of the experiments 1 & 2](#28)
     1. [QC](#29)
         1. [fastqc](#30)
@@ -44,7 +40,6 @@ Contains analysis of the 3 host swap experiment performed by M. Gravino and othe
         2. [Alignment approach](#35)
             1. [STAR](#36)
             2. [Stringtie](#37)
-
 
 ## Collect data <a name="1"></a>
 Data was copied from storage with the Swarbreck group to the Hogenhout scratch space (not backed up as already backed up with Swarbreck group).
