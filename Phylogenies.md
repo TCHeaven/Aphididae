@@ -1316,6 +1316,65 @@ for file in $(cat temp_count.txt); do
 grep 'omega (dN/dS)' $file
 done
 ```
+```bash
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_het.txt
+wc -l temp_files_het.txt #36480
+
+
+function is_valid_time {
+    current_hour=$(date +"%H")
+    day_of_week=$(date +"%u")  # 1 (Monday) through 7 (Sunday)
+    if [ "$day_of_week" -ge 1 ] && [ "$day_of_week" -le 5 ]; then
+        if [ "$current_hour" -ge 18 ] || [ "$current_hour" -lt 4 ]; then
+            return 0  # Valid time on weekdays
+        else
+            return 1  # Invalid time on weekdays
+        fi
+    else
+        return 0  # Valid time on weekends
+    fi
+}
+
+#for Seqfile in $(cat temp_csep_files.txt); do
+
+for Seqfile in $(tac temp_files_het.txt); do
+Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
+echo $Jobs 1
+TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
+OutDir=$(dirname $TreeFile)/paml
+OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out
+ProgDir=~/git_repos/Wrappers/NBI
+if is_valid_time; then
+    if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
+        while [ $Jobs -gt 189 ]; do
+            sleep 300s
+            printf "."
+            Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+        done
+        ls $TreeFile
+        mkdir $OutDir
+        ls $TreeFile 2>&1 >> logs/pamllog_het.txt
+        sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog_het.txt
+    else
+        echo Already run for ${OutFile}
+    fi 
+else
+    if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
+        while [ $Jobs -gt 189 ]; do
+            sleep 300s
+            printf "."
+            Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+        done
+        ls $TreeFile
+        mkdir $OutDir
+        ls $TreeFile 2>&1 >> logs/pamllog_het.txt
+        sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog_het.txt
+    else
+        echo Already run for ${OutFile}
+    fi 
+fi
+done
+```
 ### Between M. persicae and related species <a name="16"></a>
 
 #### Orthofinder <a name="17"></a>
