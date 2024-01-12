@@ -484,4 +484,8 @@ source package 7654f72b-1692-46bb-9a56-443406d03fd9
 SplitsTree
 #Import failed: unknown format or error in file (eg. illegal characters or multiple occurrences of same taxon name)
 #NOTE: G006 is triggering the above error, the mitochondrial sequence used as reference is from G006 -> there are therefore no SNPs for this sample causing the error? G006 was therefore reomved during filtering
+<<<<<<< HEAD
 ```
+=======
+```
+>>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
