@@ -4,21 +4,21 @@ Contains SNP analysis of the M. persicae mitochondria
 
 ## Contents
 1. [Call SNPs against the M. persicae mitochondria](#1)
-        1. [Collecting data](#2)
-        2. [QC](#3)
-                1. [FASTQC and qualimap](#4)
-                2. [Seqtk Subsampling](#5)
+    1. [Collecting data](#2)
+    2. [QC](#3)
+        1. [FASTQC and qualimap](#4)
+        2. [Seqtk Subsampling](#5)
         3. [Trimming](#6)
-                1. [Trim_galore](#7)
+            1. [Trim_galore](#7)
         4. [Alignment](#8)
-                1. [bwa-mem alignment](#9)
-                2. [Picard and GATK](#10)
+            1. [bwa-mem alignment](#9)
+            2. [Picard and GATK](#10)
         5. [Variant calling](#11)
         6. [Filtering](#12)
-                1. [Filter for SNP quality and missingness](#13)
+            1. [Filter for SNP quality and missingness](#13)
 2. [Network analysis](#14)
-        1. [Distance matrix](#15)
-        2. [Splitstree](#16)
+    1. [Distance matrix](#15)
+    2. [Splitstree](#16)
 
 Look for evidence of speciation between the aphid samples by looking at SNPs in the mitochondria:
 
