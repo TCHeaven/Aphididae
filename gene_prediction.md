@@ -176,6 +176,8 @@ sbatch $ProgDir/run_fastqc.sh $QCData $OutDir $OutFile
 done
 ```
 ## Transcriptome assembly
+
+#### Trinity
 Trinity was run to assembly a transcriptome for M. persicae using the RNASeq data, this wrapper script will do this twice: once with the --genome_guided_bam flag, and once without reference to the genome assembly.
 ```bash
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/rna_qc/Myzus/persicae/RNA_Seq/Mathers2020/trim_galore); do
@@ -205,4 +207,62 @@ Genome=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_
 ProgDir=~/git_repos/Wrappers/NBI
 sbatch $ProgDir/run_trinity.sh $OutDir $OutFile $Freads_list $Rreads_list $SSFreads_list $SSRreads_list $Max_intron $Genome
 done #56265401 - run with de novo hashed out and workdir left
+```
+##### Trinity (from 9_Host_swap.md)
+
+It is unclear whether the 'soft clipping' logic applies to trinity, will therefore use trinity trimming function.
+
+On trinity: The Inchworm and Chrysalis steps can be memory intensive. A basic recommendation is to have ~1G of RAM per ~1M pairs of Illumina reads. Simpler transcriptomes (lower eukaryotes) require less memory than more complex transcriptomes such as from vertebrates. Trinity can also require hundreds of GB of disk space available and can generate many thousands of intermediate files during the run. However, the final output files generated are few and are often relatively small (MB rather than many GB). It's good to have a temporary workspace available with sufficient disk space to use during the job execution. The entire process can require ~1/2 hour to one hour per million pairs of reads.
+
+Each fastq file from the host swap experiments contains ~18M reads requiring ~1500GB or 32 days for one run of the experiment if the above is correct, unclear if this estimate is cpu time or real time. --normalize_reads parameter should improve speed - as of sept 2016 this is on by default: https://github.com/trinityrnaseq/trinityrnaseq/wiki/Trinity-Insilico-Normalization. The largest NBI node has 4030GB memory, this could maybe handle experiment 1, experiment 2 and George's data if runtime is not an issue. Tinity manual suggests there are certain steps in the pipeline that cannot be memory limited... I beleive the inchworm step is the problem.
+
+To greatly lessen memory requirements, include the option --min_kmer_cov 2, in which case no uniquely occurring kmer will be assayed, and --normalize_by_read_set to perform the initial in silico normalization step on each pair of fastq files separately rather than combining them all into one large read set.
+
+```bash
+#Experiment 1
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Archana_Dec2020/*/*/trim_galore/*.fq.gz | wc -l #150
+#Experiment 2
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Archana/*/*/trim_galore/*.fq.gz | wc -l #160 - this contains BR0, experiment 1 does not
+#9 host swap reads:
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Myzus_persicae_O_9_species_host_swap/*/*/*.fq.gz | wc -l #90
+#George's organ reads:
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Mpersicae_organ_RNAseq/trim_galore/*/*.fq.gz | wc -l #78
+
+forward=$(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Archana_Dec2020/*/*/trim_galore/**1.fq.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Archana/*/*/trim_galore/*1.fq.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Myzus_persicae_O_9_species_host_swap/*/*/*1.fq.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Mpersicae_organ_RNAseq/trim_galore/*/*1.fq.gz | tr '\n' ',' | sed 's/,$//')
+reverse=$(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Archana_Dec2020/*/*/trim_galore/*2.fq.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Archana/*/*/trim_galore/*2.fq.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Myzus_persicae_O_9_species_host_swap/*/*/*2.fq.gz /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/RNA_Seq/Mpersicae_organ_RNAseq/trim_galore/*/*2.fq.gz | tr '\n' ',' | sed 's/,$//') 
+
+#Trinity is using a huge amount of hard drive space + appears to be amking 3 trimmed files for every input?.
+source package 09da5776-7777-44d1-9fac-4c372b38fd37
+Trinity --full_cleanup --seqType fq --CPU 64 --max_memory 4030G --min_kmer_cov 2 --normalize_by_read_set --verbose \
+--left $forward \
+--right $reverse \
+--output /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome 2>&1 >> logs/trinity_run_log.txt
+#57695683,57722987
+
+#Trinity reaches 99.994% completed, but then errors referencing Java heap space occur. It seem that this is likely due to contaminating or endosymbiont bacterial genome or a plasmids: https://github.com/trinityrnaseq/trinityrnaseq/issues/1220, https://github.com/trinityrnaseq/trinityrnaseq/issues/1325
+
+#Find those transcripts which are not completing successfully (the 0.006%, 23/401049):
+for file in $(cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome/partitioned_reads.files.list); do
+x=$(basename $file)
+if ! grep -q "$x" /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome/recursive_trinity.cmds.completed ; then
+    echo $file >> temp_trinity_23.txt
+fi
+done
+
+sleep 10800s
+#Run phase 2 step for these 23 with increased heap space:
+for file in $(cat temp_trinity_23.txt); do
+#Trinity --single $file --output ${file}.out --CPU 1 --max_memory 1G --run_as_paired --seqType fa --trinity_complete --full_cleanup --min_kmer_cov 2 --verbose --bflyHeapSpaceMax 100G
+sbatch ~/git_repos/Wrappers/NBI/temp4.sh $file
+done
+#57795755-77,57806588-604
+
+#Trinity's checkpoints only work if the original command hasn't been modified, --FORCE must therefore be used to force inclusion of both the 401026 and 23 in the final transcriptome:
+Trinity --full_cleanup --seqType fq --CPU 64 --max_memory 4030G --min_kmer_cov 2 --normalize_by_read_set --verbose --FORCE\
+--left $forward \
+--right $reverse \
+--output /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome 2>&1 >> logs/trinity_run_log2.txt
+#57765347 - check for errors after the 99.994% sticking point that will now be forced but have not been run in isolation?
+
+cp /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome.Trinity.fasta /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome.Trinity-force1.fasta
 ```
