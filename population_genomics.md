@@ -1108,8 +1108,5 @@ kinship_matrix = np.nan_to_num(kinship_matrix)
 kinship_matrix -= np.mean(kinship_matrix)
 np.savetxt("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink2/kinship_matrix.txt", kinship_matrix, fmt='%.6f', delimiter='\t')
 ```
-<<<<<<< HEAD
 Graphs were plotted in excel
-=======
-Graphs were plotted in excel
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
+

@@ -515,6 +515,8 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
     sbatch $ProgDir/run_raw_read_qc.sh $OutDir $Reference_genome $Gff $Fread $Rread $Fread2 $Rread2 $Fread3 $Rread3 $Fread4 $Rread4 $Fread5 $Rread5
 done
 #57551367-57551414
+
+#NOTE: this script does not use C2T conversion aware aligner for qualimap
 ```
 Raw read folder has been compressed to save space.
 ### Trimming <a name="16"></a>
@@ -556,7 +558,7 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
     ProgDir=~/git_repos/Wrappers/NBI
     sbatch $ProgDir/run_raw_bs_read_qc.sh $OutDir $Reference_genome $Gff $Fread $Rread 
 done
-#57795800-57795847
+#57853831-878
 
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/WGS/Archana_Feb2021/*/trim_galore); do
 sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
@@ -1646,21 +1648,12 @@ NB.Diff <- calculateDiffMeth(NB.week1.meth,
                             adjust="BH")
 NB.Diff
 save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_diffmeth.RData")
-<<<<<<< HEAD
 
 #png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Volcano.png")
 #plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
 #abline(v=0)
 #dev.off()
 
-=======
-
-#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Volcano.png")
-#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
-#abline(v=0)
-#dev.off()
-
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
 png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_diffmethperchr.png")
 diffMethPerChr(NB.Diff) 
 dev.off()
@@ -1688,7 +1681,6 @@ NB.Diff.25p <- NB.Diff.25p[order(NB.Diff.25p$qvalue), ]
 write.table(NB.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 write.table(NB.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 write.table(NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
-<<<<<<< HEAD
 
 save(NB.Diff.25p.hyper, NB.Diff.25p.hyper, NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1diffmeth.RData")
 
@@ -1735,54 +1727,6 @@ write.table(AT.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_
 write.table(AT.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 
-=======
-
-save(NB.Diff.25p.hyper, NB.Diff.25p.hyper, NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB1diffmeth.RData")
-
-#################################################################################################################################
-
-#Identify differential methylation
-AT.Diff <- calculateDiffMeth(AT.week1.meth,
-                            treatment=c(0,0,0,1,1),
-                            overdispersion = "MN",
-                            adjust="BH")
-AT.Diff
-save(AT.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_diffmeth.RData")
-
-#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Volcano.png")
-#plot(AT.Diff$meth.diff, -log10(AT.Diff$qvalue))
-#abline(v=0)
-#dev.off()
-
-png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_diffmethperchr.png")
-diffMethPerChr(AT.Diff) 
-dev.off()
-
-# get hyper methylated bases and order by qvalue
-AT.Diff.25p.hyper <- getMethylDiff(AT.Diff,
-                              difference=25,
-                              qvalue=0.01,
-                              type="hyper")
-AT.Diff.25p.hyper <- AT.Diff.25p.hyper[order(AT.Diff.25p.hyper$qvalue), ]
-
-# get hypo methylated bases and order by qvalue
-AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
-                             difference=25,
-                             qvalue=0.01,
-                             type="hypo")
-AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
-
-# get all differentially methylated bases and order by qvalue
-AT.Diff.25p <- getMethylDiff(AT.Diff,
-                        difference=25,
-                        qvalue=0.01)
-AT.Diff.25p <- AT.Diff.25p[order(AT.Diff.25p$qvalue), ]
-
-write.table(AT.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
-write.table(AT.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
-write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
-
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
 save(AT.Diff.25p.hyper, AT.Diff.25p.hyper, AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT1diffmeth.RData")
 ```
 Differential methylation between week 3 samples:
@@ -1925,7 +1869,7 @@ dev.off()
 png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_PCA.png")
 PCASamples(AT.week1.meth)
 dev.off()
-<<<<<<< HEAD
+
 
 save(AT.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3meth.RData")
 
@@ -2013,95 +1957,6 @@ AT.Diff.25p <- getMethylDiff(AT.Diff,
                         qvalue=0.01)
 AT.Diff.25p <- AT.Diff.25p[order(AT.Diff.25p$qvalue), ]
 
-=======
-
-save(AT.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3meth.RData")
-
-#################################################################################################################################
-
-#Identify differential methylation
-NB.Diff <- calculateDiffMeth(NB.week1.meth,
-                            treatment=c(0,0,0,1,1,1),
-                            overdispersion = "MN",
-                            adjust="BH")
-NB.Diff
-save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_diffmeth.RData")
-
-#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Volcano.png")
-#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
-#abline(v=0)
-#dev.off()
-
-png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_diffmethperchr.png")
-diffMethPerChr(NB.Diff) 
-dev.off()
-
-# get hyper methylated bases and order by qvalue
-NB.Diff.25p.hyper <- getMethylDiff(NB.Diff,
-                              difference=25,
-                              qvalue=0.01,
-                              type="hyper")
-NB.Diff.25p.hyper <- NB.Diff.25p.hyper[order(NB.Diff.25p.hyper$qvalue), ]
-
-# get hypo methylated bases and order by qvalue
-NB.Diff.25p.hypo <- getMethylDiff(NB.Diff,
-                             difference=25,
-                             qvalue=0.01,
-                             type="hypo")
-NB.Diff.25p.hypo <- NB.Diff.25p.hypo[order(NB.Diff.25p.hypo$qvalue), ]
-
-# get all differentially methylated bases and order by qvalue
-NB.Diff.25p <- getMethylDiff(NB.Diff,
-                        difference=25,
-                        qvalue=0.01)
-NB.Diff.25p <- NB.Diff.25p[order(NB.Diff.25p$qvalue), ]
-
-write.table(NB.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
-write.table(NB.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
-write.table(NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
-
-save(NB.Diff.25p.hyper, NB.Diff.25p.hyper, NB.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB3diffmeth.RData")
-
-#################################################################################################################################
-
-#Identify differential methylation
-AT.Diff <- calculateDiffMeth(AT.week1.meth,
-                            treatment=c(0,0,0,1,1,1),
-                            overdispersion = "MN",
-                            adjust="BH")
-AT.Diff
-save(AT.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_diffmeth.RData")
-
-#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Volcano.png")
-#plot(AT.Diff$meth.diff, -log10(AT.Diff$qvalue))
-#abline(v=0)
-#dev.off()
-
-png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_diffmethperchr.png")
-diffMethPerChr(AT.Diff) 
-dev.off()
-
-# get hyper methylated bases and order by qvalue
-AT.Diff.25p.hyper <- getMethylDiff(AT.Diff,
-                              difference=25,
-                              qvalue=0.01,
-                              type="hyper")
-AT.Diff.25p.hyper <- AT.Diff.25p.hyper[order(AT.Diff.25p.hyper$qvalue), ]
-
-# get hypo methylated bases and order by qvalue
-AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
-                             difference=25,
-                             qvalue=0.01,
-                             type="hypo")
-AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
-
-# get all differentially methylated bases and order by qvalue
-AT.Diff.25p <- getMethylDiff(AT.Diff,
-                        difference=25,
-                        qvalue=0.01)
-AT.Diff.25p <- AT.Diff.25p[order(AT.Diff.25p$qvalue), ]
-
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
 write.table(AT.Diff.25p.hyper, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Diff_25p_hyper.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 write.table(AT.Diff.25p.hypo, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Diff_25p_hypo.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 write.table(AT.Diff.25p, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT3_Diff_25p.txt", sep = "\t", quote = FALSE, row.names = FALSE)
@@ -2260,21 +2115,13 @@ NB.Diff <- calculateDiffMeth(NB.week1.meth,
                             adjust="BH")
 NB.Diff
 save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_diffmeth.RData")
-<<<<<<< HEAD
+
 
 #png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_Volcano.png")
 #plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
 #abline(v=0)
 #dev.off()
 
-=======
-
-#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_Volcano.png")
-#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
-#abline(v=0)
-#dev.off()
-
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
 png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_diffmethperchr.png")
 diffMethPerChr(NB.Diff) 
 dev.off()
@@ -2319,7 +2166,7 @@ save(AT.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/
 #plot(AT.Diff$meth.diff, -log10(AT.Diff$qvalue))
 #abline(v=0)
 #dev.off()
-<<<<<<< HEAD
+
 
 png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_diffmethperchr.png")
 diffMethPerChr(AT.Diff) 
@@ -2339,27 +2186,7 @@ AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
                              type="hypo")
 AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
 
-=======
 
-png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_diffmethperchr.png")
-diffMethPerChr(AT.Diff) 
-dev.off()
-
-# get hyper methylated bases and order by qvalue
-AT.Diff.25p.hyper <- getMethylDiff(AT.Diff,
-                              difference=25,
-                              qvalue=0.01,
-                              type="hyper")
-AT.Diff.25p.hyper <- AT.Diff.25p.hyper[order(AT.Diff.25p.hyper$qvalue), ]
-
-# get hypo methylated bases and order by qvalue
-AT.Diff.25p.hypo <- getMethylDiff(AT.Diff,
-                             difference=25,
-                             qvalue=0.01,
-                             type="hypo")
-AT.Diff.25p.hypo <- AT.Diff.25p.hypo[order(AT.Diff.25p.hypo$qvalue), ]
-
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
 # get all differentially methylated bases and order by qvalue
 AT.Diff.25p <- getMethylDiff(AT.Diff,
                         difference=25,
@@ -2504,17 +2331,12 @@ getCorrelation(AT.week1.meth,plot=TRUE)
 dev.off()
 png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_dendogram.png")
 clusterSamples(AT.week1.meth, dist="correlation", method="ward", plot=TRUE)
-<<<<<<< HEAD
+
 dev.off()
 png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_PCA.png")
 PCASamples(AT.week1.meth)
 dev.off()
-=======
-dev.off()
-png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9_PCA.png")
-PCASamples(AT.week1.meth)
-dev.off()
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
+
 
 save(AT.week1.meth, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT9meth.RData")
 
@@ -2760,21 +2582,14 @@ NB.Diff <- calculateDiffMeth(NB.week1.meth,
                             adjust="BH")
 NB.Diff
 save(NB.Diff, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_diffmeth.RData")
-<<<<<<< HEAD
+
 
 #png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Volcano.png")
 #plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
 #abline(v=0)
 #dev.off()
 
-=======
 
-#png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_Volcano.png")
-#plot(NB.Diff$meth.diff, -log10(NB.Diff$qvalue))
-#abline(v=0)
-#dev.off()
-
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
 png("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB25_diffmethperchr.png")
 diffMethPerChr(NB.Diff) 
 dev.off()
@@ -2852,15 +2667,9 @@ save(AT.Diff.25p.hyper, AT.Diff.25p.hyper, AT.Diff.25p, file = "/jic/scratch/gro
 ```
 
 #### Genomation <a name="25"></a>
-<<<<<<< HEAD
 
 Annotate differentially methylated sites to determine if they fall within promoter, intronic or exonic regions, or CpG islands.
 
-=======
-
-Annotate differentially methylated sites to determine if they fall within promoter, intronic or exonic regions, or CpG islands.
-
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
 Collect annotation info:
 ```bash
 #Create bed12 file for gene annotations
@@ -3462,7 +3271,6 @@ NB.diff.tiles.25p
 #0 rows - no differentially methylated regions
 
 ##################################################################################################################
-<<<<<<< HEAD
 
 # Rank by significance
 AT.diff.tiles <- AT.diff.tiles[order(AT.diff.tiles$qvalue),]
@@ -3566,111 +3374,6 @@ NB.diff.tiles.25p <- getMethylDiff(NB.diff.tiles,
                         difference=25,
                         qvalue=0.01)
 
-=======
-
-# Rank by significance
-AT.diff.tiles <- AT.diff.tiles[order(AT.diff.tiles$qvalue),]
-# get all differentially methylated regions
-AT.diff.tiles.25p <- getMethylDiff(AT.diff.tiles,
-                        difference=25,
-                        qvalue=0.01)
-AT.diff.tiles.25p
-#0 rows - no differentially methylated regions
-```
-DMRs - sliding window - week 6
-```R
-library("genomation")
-library("methylKit")
-#Read in the methylation ratio files
-NB.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bsmap/CpG_BR6_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_2/bsmap/CpG_BR6_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_3/bsmap/CpG_BR6_E2_3_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_1/bsmap/CpG_NB6_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_2/bsmap/CpG_NB6_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/NB6_E2_3/bsmap/CpG_NB6_E2_3_bsmap_ratios_filtered.txt")
-NB.week1=methRead(NB.file.list, 
-    sample.id=list("BR6_E2_1","BR6_E2_2","BR6_E2_3","NB6_E2_1","NB6_E2_2","NB6_E2_3"),
-    assembly="O_v2",
-    header=TRUE,
-    treatment=c(0,0,0,1,1,1),
-    mincov = 4,
-    context="CpG",
-    resolution="base",
-    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-NB.week1
-AT.file.list <- list("/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_1/bsmap/CpG_BR6_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_2/bsmap/CpG_BR6_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/BR6_E2_3/bsmap/CpG_BR6_E2_3_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_1/bsmap/CpG_AT6_E2_1_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_2/bsmap/CpG_AT6_E2_2_bsmap_ratios_filtered.txt",
-"/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/alignment/Myzus/persicae/WGBS/Archana_Mar2021/AT6_E2_3/bsmap/CpG_AT6_E2_3_bsmap_ratios_filtered.txt")
-AT.week1=methRead(AT.file.list, 
-    sample.id=list("BR6_E2_1","BR6_E2_2","BR6_E2_3","AT6_E2_1","AT6_E2_2","AT6_E2_3"),
-    assembly="O_v2",
-    header=TRUE,
-    treatment=c(0,0,0,1,1,1),
-    mincov = 4,
-    context="CpG",
-    resolution="base",
-    pipeline=list(fraction=TRUE,chr.col=1,start.col=2,end.col=2,coverage.col=6,strand.col=3,freqC.col=5 ))
-AT.week1
-
-#Read in annotation info
-refseq_anot <- readTranscriptFeatures("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.bed12",remove.unusual=FALSE)
-cpg_anot <- readFeatureFlank("/jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.cpg.bed", feature.flank.name = c("CpGi", "shores"), flank=2000)
-
-##################################################################################################################
-
-#Group methylation count by sliding window region:
-NB.tiles <- tileMethylCounts(NB.week1,win.size=1000,step.size=1000,cov.bases = 10)
-
-#Filter and normalise
-NB.tiles.filt <- filterByCoverage(NB.tiles,
-                      lo.count=4,
-                      lo.perc=NULL,
-                      hi.count=NULL,
-                      hi.perc=99.9)
-NB.tiles.filt.norm <- normalizeCoverage(NB.tiles.filt, method = "median")
-NB.meth.tiles <- unite(NB.tiles.filt.norm, destrand=FALSE)
-NB.meth.tiles
-NB.diff.tiles <- calculateDiffMeth(NB.meth.tiles,
-                            treatment=c(0,0,0,1,1,1),
-                            overdispersion = "MN",
-                            adjust="BH")
-NB.diff.tiles
-save(NB.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/NB6_diffmeth_windowed.RData")
-
-#################################################################################################################
-
-#Group methylation count by sliding window region:
-AT.tiles <- tileMethylCounts(AT.week1,win.size=1000,step.size=1000,cov.bases = 10)
-
-#Filter and normalise
-AT.tiles.filt <- filterByCoverage(AT.tiles,
-                      lo.count=4,
-                      lo.perc=NULL,
-                      hi.count=NULL,
-                      hi.perc=99.9)
-AT.tiles.filt.norm <- normalizeCoverage(AT.tiles.filt, method = "median")
-AT.meth.tiles <- unite(AT.tiles.filt.norm, destrand=FALSE)
-AT.meth.tiles
-AT.diff.tiles <- calculateDiffMeth(AT.meth.tiles,
-                            treatment=c(0,0,0,1,1,1),
-                            overdispersion = "MN",
-                            adjust="BH")
-AT.diff.tiles
-save(AT.diff.tiles, file = "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/Myzus/persicae/WGBS/Archana_Mar2021/methylkit/AT6_diffmeth_windowed.RData")
-
-#################################################################################################################
-
-# Rank by significance
-NB.diff.tiles <- NB.diff.tiles[order(NB.diff.tiles$qvalue),]
-# get all differentially methylated regions
-NB.diff.tiles.25p <- getMethylDiff(NB.diff.tiles,
-                        difference=25,
-                        qvalue=0.01)
-
->>>>>>> 9bb487a11dfffd64de11be5c3e2043aee326f5d0
 NB.diff.tiles.25p
 #0 rows - no differentially methylated regions
 
