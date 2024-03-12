@@ -28,11 +28,6 @@ Contains analysis of genes using the M. persicae population data
 
 Collect genes that have non-synonymous SNPs in them:
 ```bash
-singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
--a /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 \
--b /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf.gz \
--header > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation-nonsynonymous.gff3
-
 for vcf in $(ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf.gz); do
     InFile=$vcf
     OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3
@@ -54,8 +49,15 @@ sed -i 's/ /,/g' gene_snp_report.txt
 for file in *.vcf; do bgzip "$file"; done
 cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
 
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/ -name "*.vcf.gz" -exec readlink -f {} \; | wc -l #14,207
+
 ######################################################################################################################################################
 #Second approach
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
+-a /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation.gff3 \
+-b /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/193s.M_persicae.onlySNPs-CDS_genic_mac1-regions-nonsyn.recode.ann.vcf.gz \
+-header > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation-nonsynonymous.gff3
+
 mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene2
 grep 'gene' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.annotation-nonsynonymous.gff3 > gene_lines.gff
 
@@ -79,6 +81,8 @@ while IFS= read -r line; do
     sbatch $ProgDir/bedtools_intersect.sh $vcf ${genename}.gff3 $OutFile 2>&1 >> logs/bedtools_intersect.txt
 done < gene_lines.gff
 ```
+There are 14,207 genes with non-synonymous SNPs in them.
+
 Plot cumulative frequency of SNPs in genes:
 ```R
 df <- read.table(file = "//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/non_synonymous_snps_per_gene3/gene_snp_report.txt", sep = ',', header = FALSE)
@@ -415,12 +419,17 @@ bedtools getfasta -fi $scaffold -bed /jic/research-groups/Saskia-Hogenhout/TCHea
 #To extract CDS only:
 source package /tgac/software/testing/bin/gffread-0.11.4
 gffread -x /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}.gff3.nt3 -g $scaffold /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/${name}.gff
+#x specifies the output
 done 
 
 cat /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/scaffold_*.gff3.nt2 > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.gene.fa
 cat /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds/scaffold_*.gff3.nt3 > /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.CDS.fa
 rm -r /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/scaffolds
+
+grep '>' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3.nt.CDS.fa | wc -l #47,508
 ```
+There are 47,508 splice variants.
+
 ### Seperate SNP data for each gene in the M. persicae genome <a name="4"></a>
 
 Create a vcf file for each gene:
@@ -460,6 +469,8 @@ sed -i 's/ /,/g' gene_snp_report.txt
 for file in *; do bgzip "$file"; done
 cd /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
 
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene | grep '.vcf' | wc -l #23,455
+
 ######################################################################################################################################################
 #Second appraoch
 mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene2
@@ -486,6 +497,8 @@ while IFS= read -r line; do
 done < gene_lines.gff
 0000030
 ```
+There are 23,455 whole gene regions with SNPs in them.
+
 Plot cumulative frequency of SNPs in genes:
 ```R
 df <- read.table(file = "//jic-hpc-data/Group-Scratch/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/gene_snp_report.txt", sep = ',', header = FALSE)
@@ -585,6 +598,7 @@ ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/p
 find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/ -name "*dedup_MYZPE13164_O_EIv2.1_*_snps.vcf" -exec readlink -f {} \; | wc -l #23,456 - 5,662 have no CDS SNPs
 #I have investigated a few individual genes and confirmed that the genes missing from /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2 have no SNPs in their CDS regions
 ```
+The CDS regions of 17,794 genes have SNPs in them.
 
 #### Extract gene information <a name="7"></a>
 
@@ -742,6 +756,9 @@ awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/s
 awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0110900.fa #All samples are same length as expected
 awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0210900.fa #All samples are same length as expected
 awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0310900.fa #All samples are same length as expected
+
+#Check that we have multifastas for all 23,455 genes with SNPs in them:
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/*.fa | wc -l #23,455
 ```
 For heterozygous mutations:
 ```bash
@@ -841,6 +858,8 @@ awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/s
 awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0210900.1_CDS.fa #missing - this has no mRNA and is ncRNA therefore the loop did not work
 awk '{print length}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0310900.1_CDS.fa #same lengths and multiple of 3
 
+#Find the number of splice variants for genes with SNPs:
+grep 'ncRNA' /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3 | grep -v 'gene' | wc -l #11,101
 grep 'mRNA' /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3 | wc -l #47,508
 for gene_multifasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas -name "hom_MYZPE13164_O_EIv2.1_*.fa" -exec readlink -f {} \;); do  
 gff=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3
@@ -854,23 +873,44 @@ echo $OutFile >> temp_count_hom.txt
 done
 done 
 wc -l temp_count_hom.txt #36,535
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "*" -exec readlink -f {} \; >> temp_hom.txt
-wc -l temp_hom.txt #54,381 <- this makes no sense there should not be more CDS fasta files than there are mRNA in the .gff, there should be less as not all genes have SNPs
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom*.fa" -exec readlink -f {} \; >> temp_hom2.txt
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom*+.fa" -exec readlink -f {} \; >> temp_hom3.txt
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom*-.fa" -exec readlink -f {} \; >> temp_hom3.txt
-wc -l temp_hom3.txt #36,434
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas -name "hom_MYZPE13164_O_EIv2.1_*.fa" -exec readlink -f {} \; >> temp_hom4.txt
-wc -l temp_hom4.txt #23,455
-for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -name "het_MYZPE13164_O_EIv2.1_*.fa" -exec readlink -f {} \;); do
-name=$(basename $file | sed 's@het_@@g')
-if ! grep -q "$name" temp_hom3.txt ; then
-echo $name >> temp_missing_hom.txt
-fi
+
+#Do we have fastas for all of these?
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -maxdepth 1 -type f -exec readlink -f {} \; > temp_hom.txt
+cat temp_hom.txt | wc -l # 36,480
+#no, 54 are missing >:(
+
+#Find missing variants:
+x=$(cat temp_hom.txt | rev | cut -d '/' -f1 | cut -d '.' -f2,3,4 | cut -d '_' -f2,3,4,5,6 | rev | sort)
+y=$(cat temp_count_hom.txt | rev | cut -d '.' -f2,3,4 | cut -d '_' -f2,3,4,5,6 | rev )
+x_sorted=$(echo "$x" | tr ' ' '\n' | sort)
+y_sorted=$(echo "$y" | tr ' ' '\n' | sort)
+result=$(comm -23 <(echo "$y_sorted") <(echo "$x_sorted"))
+echo "$result" | tr ' ' '\n' > temp_missing_hom.txt
+
+#repeat for missing variants:
+for x in $(cat temp_missing_hom.txt); do
+gff=/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3
+variant=$(echo $x | cut -d '_' -f2,3,4,5)
+gene_multifasta=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/$(echo $x | cut -d '.' -f1,2).fa
+OutFile=hom_$(echo $variant)_CDS.fa 
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/missing_hom
+ProgDir=/hpc-home/did23faz/git_repos/Wrappers/NBI 
+echo ${OutDir}/${OutFile} >> logs/hom_splice_CDS_missing.txt
+echo $variant >> logs/hom_splice_CDS_missing.txt
+echo $gene_multifasta >> logs/hom_splice_CDS_missing.txt
+sbatch $ProgDir/run_splice_CDS.sh $gene_multifasta $gff $variant $OutDir $OutFile 2>&1 >> logs/hom_splice_CDS_missing.txt
 done
+#This has completed for all 55 missing variants
 
+mv /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/missing_hom/* /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/.
 
+#Now do we have fastas for all splice variants for genes with SNPs?
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -maxdepth 1 -type f -exec readlink -f {} \; > temp_hom.txt
+cat temp_hom.txt | wc -l #36,535
+#yes
 
+#Have mutant CDS been generated for all mutant genes?:
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -maxdepth 1 -type f -exec readlink -f {} \; >> temp.txt
 for gene_multifasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas -name "hom_MYZPE13164_O_EIv2.1_*.fa" -exec readlink -f {} \;); do  
 name=$(basename $gene_multifasta | cut -d '.' -f1,2)
 if grep -q "$name" temp.txt ; then
@@ -879,14 +919,23 @@ else
 echo $gene_multifasta >> temp_erro.txt
 fi
 done
-
 wc -l temp_erro.txt #4,406
+#No, 4,406 mutant genes have no associated CDS variant file.
 
-for gene in $(cat temp_erro.txt); do
-name=$(basename $gene | cut -d '.' -f1,2 | cut -d '_' -f2,3,4,5)
-if ! grep -q "$name" /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3 || ! grep -q "ncRNA" /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3 ; then
-echo $gene is missng and not a ncRNA
-fi
+#CDS files were generated only for mRNAs not ncRNAs, are the gene with no associated CDS files ncRNAs?
+for gene in $(tac temp_erro.txt); do
+    name=$(basename $gene | cut -d '.' -f1,2| cut -d '_' -f2,3,4,5) 
+    if grep -q "$name" "/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3"; then
+        result=$(grep "$name" /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3)
+        if echo "$result" | grep -q "ncRNA" ; then
+            #echo $gene is an ncRNA
+            sleep 0
+        else
+            echo $gene is missing and not an ncRNA
+        fi
+    else
+        echo $gene is not in the GFF!
+    fi
 done
 #This confirms that all missing genes are ncRNAs
 ```
@@ -923,7 +972,7 @@ for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp
 cp $file /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/hom_CDS_fastas/.
 done
 
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom*.fa" -exec readlink -f {} \; | wc -l #36,480
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom*.fa" -exec readlink -f {} \; | wc -l #36,535
 ```
 For heterozygous mutations:
 ```bash
@@ -964,15 +1013,35 @@ done
 find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -name "*" -exec readlink -f {} \; >> temp_het.txt
 wc -l temp_het.txt #36,536
 
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -name "*" -exec readlink -f {} \; >> temp2.txt
+#Have mutant CDS been generated for all mutant genes?:
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -maxdepth 1 -type f -exec readlink -f {} \; >> temp2.txt
 for gene_multifasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas -name "het_MYZPE13164_O_EIv2.1_*.fa" -exec readlink -f {} \;); do  
-name=$(basename $gene_multifasta | cut -d '.' -f1)
+name=$(basename $gene_multifasta | cut -d '.' -f1,2)
 if grep -q "$name" temp2.txt ; then
+sleep 0
 else
-echo $gene_multifasta > temp_erro.txt
+echo $gene_multifasta >> temp_erro2.txt
+fi
 done
+wc -l temp_erro2.txt #4,406
+#No, 4,406 mutant genes have no associated CDS variant file.
 
-56399073
+#CDS files were generated only for mRNAs not ncRNAs, are the gene with no associated CDS files ncRNAs?
+for gene in $(tac temp_erro2.txt); do
+    name=$(basename $gene | cut -d '.' -f1,2| cut -d '_' -f2,3,4,5) 
+    if grep -q "$name" "/jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3"; then
+        result=$(grep "$name" /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/MYZPE13164_O_EIv2.1.annotation.gff3)
+        if echo "$result" | grep -q "ncRNA" ; then
+            #echo $gene is an ncRNA
+            sleep 0
+        else
+            echo $gene is missing and not an ncRNA
+        fi
+    else
+        echo $gene is not in the GFF!
+    fi
+done
+#This confirms that all missing genes are ncRNAs
 ```
 Correct for strandedness:
 ```bash
@@ -1004,7 +1073,7 @@ for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp
 cp $file /jic/research-groups/Saskia-Hogenhout/TCHeaven/PopGen/M_persicae_SNP_population/het_CDS_fastas/.
 done
 
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; | wc -l #37,769
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -name "het*.fa" -maxdepth 1 -exec readlink -f {} \; | wc -l #36,535
 ```
 #### Effector candidates <a name="10"></a>
 
@@ -1155,7 +1224,7 @@ sed -i 's@MYZPE13164_O_EIv2.1_@_@g' temp77.fa
 sed -i 's@_CDS@@g' temp77.fa
 sed -i 's@_@@g' temp77.fa
 
-for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \;); do
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -maxdepth 1 -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \;); do
 sed -i '/^$/d' $file
 multifasta=$file
 OutFile=$(basename $multifasta | sed 's@.fa@@g')
@@ -1186,7 +1255,7 @@ multifasta=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling
 
 #######################################################################################################################
 
-for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \;); do
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -maxdepth 1 -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \;); do
 sed -i '/^$/d' $file
 multifasta=$file
 OutFile=$(basename $multifasta | sed 's@.fa@@g')
@@ -1226,19 +1295,83 @@ for Seqfile in $(tac temp_files.txt); do
     fi
 done
 
+wc -l temp_missing.txt #412
+
+#Repeat
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -maxdepth 1 -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \;); do
+sed -i '/^$/d' $file
+multifasta=$file
+OutFile=$(basename $multifasta | sed 's@.fa@@g')
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/RAxML/$OutFile
+ProgDir=~/git_repos/Wrappers/NBI
+Jobs=$(squeue -u did23faz| grep 'RAxML' | wc -l)
+while [ $Jobs -gt 99 ]; do
+sleep 60s
+printf "."
+Jobs=$(squeue -u did23faz| grep 'RAxML' | wc -l)
+done
+if [ ! -e ${OutDir}/${OutFile}.raxml.bestTree ]; then
+mkdir $OutDir
+echo $OutFile  
+echo $OutFile >> logs/raxml_hom_failed.txt
+sbatch $ProgDir/run_RAxML_msa.sh $multifasta $OutDir $OutFile 2>&1 >> logs/raxml_hom_failed.txt
+else
+echo Done for $OutFile
+fi
+done
+
+#Did the jobs for these missing files fail?:
 for x in $(cat temp_missing.txt); do
     y=$(echo $x | rev | cut -d '/' -f1 | rev | sed 's@.fa@@g')
     z=$(grep -A 1 "$y" logs/raxml_hom.txt | awk 'NR==2' | cut -d ' ' -f4)
     sacct -j $z --format=JobID,JobName,ReqMem,MaxRSS,TotalCPU,AllocCPUS,Elapsed,State,ExitCode
+done
+
+####################################################################################################################################
+for Seqfile in $(tac temp_files_het.txt); do
+    TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
+    if [ ! -e "${TreeFile}" ] || [ ! -s "${TreeFile}" ]; then
+        echo $Seqfile >> temp_missing_het.txt
+    fi
+done
+
+wc -l temp_missing_het.txt #1075 
+
+#Repeat
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -maxdepth 1 -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \;); do
+sed -i '/^$/d' $file
+multifasta=$file
+OutFile=$(basename $multifasta | sed 's@.fa@@g')
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/RAxML/$OutFile
+ProgDir=~/git_repos/Wrappers/NBI
+Jobs=$(squeue -u did23faz| grep 'RAxML' | wc -l)
+while [ $Jobs -gt 99 ]; do
+sleep 60s
+printf "."
+Jobs=$(squeue -u did23faz| grep 'RAxML' | wc -l)
+done
+if [ ! -e ${OutDir}/${OutFile}.raxml.bestTree ]; then
+mkdir $OutDir
+echo $OutFile  
+echo $OutFile >> logs/raxml_het_failed.txt
+sbatch $ProgDir/run_RAxML_msa.sh $multifasta $OutDir $OutFile 2>&1 >> logs/raxml_het_failed.txt
+else
+echo Done for $OutFile
+fi
 done
 ```
 #### PAML - Omega DN/DS <a name="15"></a>
 
 Calculate omega for each gene from the SNP data.
 ```bash
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files.txt
-wc -l temp_files.txt #36480
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -maxdepth 1 -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files.txt
+wc -l temp_files.txt #36535
 
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/N
+for file in $(cat temp_files.txt); do
+cp $file $(dirname $file)/N/.
+sed -i '/^>/! s/N/?/g' $(dirname $file)/N/$(basename $file)
+done
 
 function is_valid_time {
     current_hour=$(date +"%H")
@@ -1260,8 +1393,9 @@ for Seqfile in $(tac temp_files.txt); do
 Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
 echo $Jobs 1
 TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
+SeqfileN=$(dirname $Seqfile)/N/$(basename $Seqfile)
 OutDir=$(dirname $TreeFile)/paml
-OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out
+OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').N_corrected.out
 ProgDir=~/git_repos/Wrappers/NBI
 if is_valid_time; then
     if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
@@ -1273,7 +1407,7 @@ if is_valid_time; then
         ls $TreeFile
         mkdir $OutDir
         ls $TreeFile 2>&1 >> logs/pamllog.txt
-        sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog.txt
+        sbatch $ProgDir/run_paml_omega.sh $SeqfileN $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllogN.txt
     else
         echo Already run for ${OutFile}
     fi 
@@ -1287,7 +1421,7 @@ else
         ls $TreeFile
         mkdir $OutDir
         ls $TreeFile 2>&1 >> logs/pamllog.txt
-        sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog.txt
+        sbatch $ProgDir/run_paml_omega.sh $SeqfileN $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllogN.txt
     else
         echo Already run for ${OutFile}
     fi 
@@ -1300,7 +1434,7 @@ for gene in $(cat /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/p
 ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_${gene}* >> temp_csep_files.txt
 done
 
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_all.txt
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -maxdepth 1 -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_all.txt
 for Seqfile in $(cat temp_files_all.txt); do
 TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
 OutDir=$(dirname $TreeFile)/paml
@@ -1310,22 +1444,120 @@ if [ -e "${OutDir}/${OutFile}" ] && [ -s "${OutDir}/${OutFile}" ]; then
 fi
 done
 cat temp_count.txt | wc -l #
+```
+The mutant CDS sequences were produced by splicing mutant gene sequences, we therefore don't know that the coding regions have SNPs in them, only that the whole gene regions do...
+```bash
+#Make variant specific .vcf files
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants
+
+for file in $(cat temp_count.txt); do
+variant=$(echo $file | rev | cut -d '_' -f1,2,3,4 | rev | cut -d '.' -f1,2,3)
+grep '#\|'"$variant"'.CDS' snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1.CDS_annotation.gff3 > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.gff3
+done
+
+for file in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants -maxdepth 1 -name "MYZPE13164_O_EIv2.1.CDS_*.gff3" -exec readlink -f {} \;); do
+grep -v '^###$' $file > temp_244.txt && mv temp_244.txt $file
+done
+
+for file in $(cat temp_count.txt); do
+variant=$(echo $file | rev | cut -d '_' -f1,2,3,4 | rev | cut -d '.' -f1,2,3)
+gene=$(echo $variant | cut -d '.' -f1,2)
+if [ -e "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/${gene}_snps.vcf.gz" ] && [ ! -e "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf" ]; then
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/pybed.simg bedtools intersect \
+-a /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/${gene}_snps.vcf.gz \
+-b /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.gff3 \
+-header > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf
+else
+echo $gene has no SNPs in the coding region or has been run already
+fi
+done
 
 #Inspect the DN/DS of each gene
+echo -e "Gene_variant\tOmega\tSNP_sites\tTotal_number_of_SNPs" > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/homozygous_omega.txt
 for file in $(cat temp_count.txt); do
-grep 'omega (dN/dS)' $file
+variant=$(echo $file | rev | cut -d '_' -f1,2,3,4 | rev | cut -d '.' -f1,2,3)
+gene=$(echo $variant | cut -d '.' -f1,2)
+dnds=$(grep 'omega (dN/dS)' $file | rev | cut -d ' ' -f1 | rev)
+if [ -e "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf" ]; then
+sites=$(cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf | grep '1/1' | wc -l)
+SNPs=$(cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf | grep -o '1/1' | wc -l)
+if [ "${sites}" -eq 0 ]; then
+echo -e "${variant}\t${dnds}\t0\t0" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/homozygous_omega.txt
+else
+echo -e "${variant}\t${dnds}\t${sites}\t${SNPs}" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/homozygous_omega.txt
+fi
+else
+echo -e "${variant}\t${dnds}\tNA\tNA" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/homozygous_omega.txt
+fi
 done
-```
-```bash
-find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_het.txt
-wc -l temp_files_het.txt #36480
 
+#Some paml omega score make no sense, eg:
+#MYZPE13164_O_EIv2.1_0368030.1   0.23681 0       0
+#MYZPE13164_O_EIv2.1_0137770.2   0.05978 0       0
+```
+ERROR: N positions were not removed from the multifastas before calculating trees... I think this is why there are genes with no SNPs that have an omega calculated. RAxML should have ignored the N positions. - Publishers of RAxML conform that N positions in the multifastas given to RAxML should make no difference.
+
+Possibly PAML needs missing sequences as '?' not 'N'? From PAML manual: "In a sequence, T, C, A, G, U, t, c, a, g, u are recognized as nucleotides (for baseml, basemlg and codonml), while the standard one-letter codes (A, R, N, D, C, Q, E, G, H, I, L, K, M, F, P, S, T, W, Y, V or their lowercase equivalents) are recognized as amino acids. Ambiguity characters (undetermined nucleotides or amino acids) are allowed as well. Three special characters ".", "-", and "?" are interpreted like this: a dot means the same character as in the first sequence, a dash means an alignment gap, and a question mark means an undetermined nucleotide or amino acid. Nonalphabetic symbols such as ><!’"£$%&^[](){}0123456789 inside a sequence are simply ignored and can be freely used as signposts. Lines do not have to be equally long and you can put the whole sequence on one line. The way that ambiguity characters and alignment gaps are treated in baseml and codeml depends n the variable cleandata in the control file. In the maximum likelihood analysis, sites at which at least one sequence involves an ambiguity character are removed from all sequences before analysis if cleandata = 1, while if cleandata = 0, both ambiguity characters and alignment gaps are treated as ambiguity characters."
+
+cleandata default setting = 0, therefore ambiguity characters are left in - we want this as otherwise good sequences from other samples will be lost...
+
+From FAQ document:
+"Ambiguity characters (such as Y for pyrimidines T or C, ? for any nucleotide or amino acid) can be
+accommodated by the likelihood programs (baseml and codeml). The idea used is due to Joe
+Felsenstein and has been in use for some years. It was described in Yang (2000 J. Mol. Evol. 51:
+page 424 bottom). Using ambiguity characters will increase the computation (both memory and
+running time) compared with removing them.
+Alignment gaps are more difficult. PAML does not have any methods of dealing with them
+properly. The two options are (1) to remove them, which you could do by manually removing
+them or by choosing cleandata = 1; and (2) to treat them as ambiguity (undetermined)
+nucleotides or amino acids. The latter is the default behavior if gaps are in the data. Neither is
+ideal. One obvious effect is that both strategies under-estimate sequence divergences, while the
+effects on other analyses might not be so clear. Personally I think sites at which most sequences
+have data except for one or two sequences should perhaps be kept while sites at which all
+sequences except one or two have alignment gaps had better be removed. "
+```bash
+#experimenting with problem gene variants seems to confirm that replacing 'N' characters with '?' characters fixes the problem:
+nano /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/RAxML/hom_MYZPE13164_O_EIv2.1_0137770.2_CDS-/N/paml/hom_MYZPE13164_O_EIv2.1_0137770.2.out
+omega (dN/dS) =  0.00010
+nano /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/RAxML/hom_MYZPE13164_O_EIv2.1_0368030.1_CDS-/N/paml/hom_MYZPE13164_O_EIv2.1_0368030.1.out
+omega (dN/dS) =  0.00010
+```
+Experimenting with problem gene variants seems to confirm that replacing 'N' characters with '?' characters fixes the problem, however this will mean rerunning all the gene variants for ogema? :(
+```bash
+#How many variant multifastas have Ns?:
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -maxdepth 1 -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_ffgf.txt
+for file in $(cat temp_ffgf.txt); do
+noN=$(grep -v '>' $file | grep 'N' | wc -l)
+count=$(grep 'N' $file | sort -u | wc -l)
+max=$(awk '{ count=gsub(/N/, ""); if (count > max) max = count } END { print max }' $file)
+if [ "$noN" -gt 0 ]; then
+echo -e "${file}\t${count}\t${max}" >> temp_problem_fastas.txt
+fi
+done
+wc -l temp_problem_fastas.txt #33,753 :(
+awk '{ sum += $2 } END { if (NR > 0) print sum/NR }' temp_problem_fastas.txt #50.5634 samples on average contain Ns
+```
+Rerunning paml-omega, with '?' characters, now with 8 tasks per job to overcome the max 200 jobs allowed on the HPC - will still take a month the rerun them all :(
+```bash
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas -maxdepth 1 -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_het.txt
+wc -l temp_files_het.txt #36535
+
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/N
+for file in $(cat temp_files_het.txt); do
+cp $file $(dirname $file)/N/.
+sed -i '/^>/! s/N/?/g' $(dirname $file)/N/$(basename $file)
+done
+
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/N -maxdepth 1 -name "het_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_het_N.txt
+wc -l temp_files_het_N.txt #36535
+wc -l temp_files_het_N_effector.txt #1234
+wc -l temp_files_het_N_non-effector.txt #35301
 
 function is_valid_time {
     current_hour=$(date +"%H")
     day_of_week=$(date +"%u")  # 1 (Monday) through 7 (Sunday)
     if [ "$day_of_week" -ge 1 ] && [ "$day_of_week" -le 5 ]; then
-        if [ "$current_hour" -ge 18 ] || [ "$current_hour" -lt 4 ]; then
+        if [ "$current_hour" -ge 20 ] || [ "$current_hour" -lt 4 ]; then
             return 0  # Valid time on weekdays
         else
             return 1  # Invalid time on weekdays
@@ -1335,45 +1567,489 @@ function is_valid_time {
     fi
 }
 
-#for Seqfile in $(cat temp_csep_files.txt); do
+input_file=temp_files_het_N_non-effector.txt
+lines_per_batch=8
+while IFS= read -r line1 && IFS= read -r line2 && IFS= read -r line3 && IFS= read -r line4 && \
+      IFS= read -r line5 && IFS= read -r line6 && IFS= read -r line7 && IFS= read -r line8; do
+    Seqfile8="$line1 $line2 $line3 $line4 $line5 $line6 $line7 $line8"
+    TreeFile8=""
+    OutDir8=""
+    OutFile8=""
+    for file_line in $Seqfile8; do
+        TreeFile=$(dirname "$file_line" | cut -d '/' -f1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)/RAxML/$(basename "$file_line" | sed 's@.fa@@g')/$(basename "$file_line" | sed 's@.fa@@g').raxml.bestTree
+        OutDir=$(dirname $TreeFile)/paml
+        OutFile=$(basename $file_line | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').N_corrected.out
+        TreeFile8+=" $TreeFile"
+        OutDir8+=" $OutDir"
+        OutFile8+=" $OutFile"
+    done
+    ProgDir=~/git_repos/Wrappers/NBI
+    while  squeue -u did23faz | grep -q '(AssocMaxJobsLimit)\|(Resources)\|(Priority)'; do
+        sleep 300s
+        printf "."
+    done
+    Jobs=$(squeue -u did23faz| grep 'paml8'  | wc -l)
+    echo $Jobs
+    if is_valid_time; then
+        if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
+            sleep 30s
+            while [ $Jobs -gt 200 ]; do
+                sleep 300s
+                printf "."
+                Jobs=$(squeue -u did23faz| grep 'paml8'| wc -l)
+            done
+            echo Running for $OutFile8
+            echo Running for $OutFile8 >> logs/pamllog_hetN.txt
+            sbatch $ProgDir/run_paml_omega_parallel.sh "$Seqfile8" "$TreeFile8" "$OutDir8" "$OutFile8" 2>&1 >> logs/pamllog_hetN.txt
+        else
+            echo Already run for this batch
+        fi 
+    else
+        if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
+            sleep 30s
+            while [ $Jobs -gt 50 ]; do
+                sleep 300s
+                printf "."
+                Jobs=$(squeue -u did23faz| grep 'paml8'| wc -l)
+            done
+            echo Running for $OutFile8
+            echo Running for $OutFile8 >> logs/pamllog_hetN.txt
+            sbatch $ProgDir/run_paml_omega_parallel.sh "$Seqfile8" "$TreeFile8" "$OutDir8" "$OutFile8" 2>&1 >> logs/pamllog_hetN.txt
+        else
+            echo Already run for this batch
+        fi 
+    fi
+done < "$input_file"
 
-for Seqfile in $(tac temp_files_het.txt); do
-Jobs=$(squeue -u did23faz| grep 'paml'  | wc -l)
-echo $Jobs 1
-TreeFile=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/$(basename $Seqfile | sed 's@.fa@@g').raxml.bestTree
-OutDir=$(dirname $TreeFile)/paml
-OutFile=$(basename $Seqfile | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').out
-ProgDir=~/git_repos/Wrappers/NBI
-if is_valid_time; then
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas -maxdepth 1 -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_hom.txt
+wc -l temp_files_het.txt #36535
+
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/N
+for file in $(cat temp_files_hom.txt); do
+cp $file $(dirname $file)/N/.
+sed -i '/^>/! s/N/?/g' $(dirname $file)/N/$(basename $file)
+done
+
+find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/N -maxdepth 1 -name "hom_MYZPE13164_O_EIv2.1_*_CDS*.fa" -exec readlink -f {} \; > temp_files_hom_N.txt
+wc -l temp_files_hom_N.txt #36535
+wc -l temp_files_hom_N_effector.txt #1234
+wc -l temp_files_hom_N_non-effector.txt #35301
+
+function is_valid_time {
+    current_hour=$(date +"%H")
+    day_of_week=$(date +"%u")  # 1 (Monday) through 7 (Sunday)
+    if [ "$day_of_week" -ge 1 ] && [ "$day_of_week" -le 5 ]; then
+        if [ "$current_hour" -ge 20 ] || [ "$current_hour" -lt 4 ]; then
+            return 0  # Valid time on weekdays
+        else
+            return 1  # Invalid time on weekdays
+        fi
+    else
+        return 0  # Valid time on weekends
+    fi
+}
+
+input_file=temp_files_hom_N_non-effector.txt
+lines_per_batch=8
+while IFS= read -r line1 && IFS= read -r line2 && IFS= read -r line3 && IFS= read -r line4 && \
+      IFS= read -r line5 && IFS= read -r line6 && IFS= read -r line7 && IFS= read -r line8; do
+    Seqfile8="$line1 $line2 $line3 $line4 $line5 $line6 $line7 $line8"
+    TreeFile8=""
+    OutDir8=""
+    OutFile8=""
+    for file_line in $Seqfile8; do
+        TreeFile=$(dirname "$file_line" | cut -d '/' -f1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)/RAxML/$(basename "$file_line" | sed 's@.fa@@g')/$(basename "$file_line" | sed 's@.fa@@g').raxml.bestTree
+        OutDir=$(dirname $TreeFile)/paml
+        OutFile=$(basename $file_line | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').N_corrected.out
+        TreeFile8+=" $TreeFile"
+        OutDir8+=" $OutDir"
+        OutFile8+=" $OutFile"
+    done
+    ProgDir=~/git_repos/Wrappers/NBI
+    while  squeue -u did23faz | grep -q '(AssocMaxJobsLimit)\|(Resources)\|(Priority)'; do
+        sleep 300s
+        printf "."
+    done
+    Jobs=$(squeue -u did23faz| grep 'paml8'  | wc -l)
+    echo $Jobs
+    if is_valid_time; then
     if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
-        while [ $Jobs -gt 189 ]; do
+        sleep 30s
+        while [ $Jobs -gt 200 ]; do
             sleep 300s
             printf "."
-            Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+            Jobs=$(squeue -u did23faz| grep 'paml8'| wc -l)
         done
-        ls $TreeFile
-        mkdir $OutDir
-        ls $TreeFile 2>&1 >> logs/pamllog_het.txt
-        sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog_het.txt
+    echo Running for $OutFile8
+    echo Running for $OutFile8 >> logs/pamllog_homN.txt
+    sbatch $ProgDir/run_paml_omega_parallel.sh "$Seqfile8" "$TreeFile8" "$OutDir8" "$OutFile8" 2>&1 >> logs/pamllog_homN.txt
     else
-        echo Already run for ${OutFile}
+        echo Already run for this batch
     fi 
 else
     if [ ! -e "${OutDir}/${OutFile}" ] || [ ! -s "${OutDir}/${OutFile}" ]; then
-        while [ $Jobs -gt 189 ]; do
+        sleep 30s
+        while [ $Jobs -gt 50 ]; do
             sleep 300s
             printf "."
-            Jobs=$(squeue -u did23faz| grep 'paml'| wc -l)
+            Jobs=$(squeue -u did23faz| grep 'paml8'| wc -l)
         done
-        ls $TreeFile
-        mkdir $OutDir
-        ls $TreeFile 2>&1 >> logs/pamllog_het.txt
-        sbatch $ProgDir/run_paml_omega.sh $Seqfile $TreeFile $OutDir $OutFile 2>&1 >> logs/pamllog_het.txt
+    echo Running for $OutFile8
+    echo Running for $OutFile8 >> logs/pamllog_homN.txt
+    sbatch $ProgDir/run_paml_omega_parallel.sh "$Seqfile8" "$TreeFile8" "$OutDir8" "$OutFile8" 2>&1 >> logs/pamllog_homN.txt
     else
-        echo Already run for ${OutFile}
+        echo Already run for this batch
     fi 
 fi
+done < "$input_file"
+
+
+
+count=0
+for file_line in $(cat temp_files_het_N.txt); do
+        TreeFile=$(dirname "$file_line" | cut -d '/' -f1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)/RAxML/$(basename "$file_line" | sed 's@.fa@@g')/$(basename "$file_line" | sed 's@.fa@@g').raxml.bestTree
+        OutDir=$(dirname $TreeFile)/paml
+        OutFile=$(basename $file_line | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').N_corrected.out
+            if [[ -f ${OutDir}/${OutFile} ]]; then
+               ((count++))
+            fi
 done
+echo "$count"
+
+count=0
+for file_line in $(cat temp_files_hom_N.txt); do
+        TreeFile=$(dirname "$file_line" | cut -d '/' -f1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)/RAxML/$(basename "$file_line" | sed 's@.fa@@g')/$(basename "$file_line" | sed 's@.fa@@g').raxml.bestTree
+        OutDir=$(dirname $TreeFile)/paml
+        OutFile=$(basename $file_line | sed 's@_CDS-.fa@@' | sed 's@_CDS+.fa@@').N_corrected.out
+            if [[ -f ${OutDir}/${OutFile} ]]; then
+               ((count++))
+            fi
+done
+echo "$count"
+```
+Upon inspection of the new omega scores it seems like there are still instances where gene variants with zero SNPs have non-minimal >0.00010 omega score, this makes no sense...
+
+#### KaKs
+Non paml approach:
+```bash
+#Generate amino acid alignments:
+source package a684a2ed-d23f-4025-aa81-b21e27e458df
+mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/protein_fastas
+for Seqfile in $(tac temp_files_het.txt); do
+transeq -sequence $Seqfile -outseq /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/protein_fastas/$(basename $Seqfile)a
+done
+
+#Generate codon alignments:
+source package 6a834a39-85e8-4f91-854b-29a1a22894db
+perl-centos7 ~/git_repos/Scripts/NBI/pal2nal.pl pep.aln nuc.fasta -output paml -codontable 1 > codon_alignment.phy
+
+#KaKs
+for Seqfile in $(tac temp_files_het.txt temp_files.txt); do
+Jobs=$(squeue -u did23faz| grep 'did23faz'  | wc -l)
+OutDir=$(dirname $Seqfile)/RAxML/$(basename $Seqfile | sed 's@.fa@@g')/KaKs_Calculator
+ProgDir=~/git_repos/Wrappers/NBI
+while [ $Jobs -gt 199 ]; do
+    sleep 60s
+    printf "."
+    Jobs=$(squeue -u did23faz| grep 'did23faz'| wc -l)
+done
+mkdir $OutDir
+sbatch $ProgDir/run_KaKs_Calculator.sh $Seqfile $OutDir
+done
+
+#Collect output for homozygous
+for dir in /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/RAxML/hom_*/KaKs_Calculator; do
+    find "$dir" -name "*kakscalculator.txt" -exec bash -c 'echo "$1" >> hom_kaka_count.txt' _ {} \;
+done
+
+echo -e "Gene_variant\tPaml_Omega\tSNP_sites\tTotal_number_of_SNPs\tkaks_Omega" > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/homozygous_omega_kaks.txt
+for file in $(cat hom_kaka_count.txt); do
+variant=$(echo $file | rev | cut -d '_' -f3,4,5,6 | rev | cut -d '.' -f1,2,3)
+gene=$(echo $variant | cut -d '.' -f1,2)
+kaks=$(grep '>' $file | awk '{print $5}')
+paml_file=$(find "$(dirname "$file" | sed 's@KaKs_Calculator@paml@g')" -type f -name '*.N_corrected.out' -print)
+if [ -z "$paml_file" ]; then
+    dnds="unfinished"
+else
+    dnds=$(grep 'omega (dN/dS)' "$paml_file" | rev | cut -d ' ' -f1 | rev)
+fi
+if [ -e "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf" ]; then
+sites=$(cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf | grep '1/1' | wc -l)
+SNPs=$(cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf | grep -o '1/1' | wc -l)
+if [ "${sites}" -eq 0 ]; then
+echo -e "${variant}\t${dnds}\t0\t0\t${kaks}" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/homozygous_omega_kaks.txt
+else
+echo -e "${variant}\t${dnds}\t${sites}\t${SNPs}\t${kaks}" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/homozygous_omega_kaks.txt
+fi
+else
+echo -e "${variant}\t${dnds}\tNA\tNA\t${kaks}" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/homozygous_omega_kaks.txt
+fi
+done
+
+#Collect output for heterozygous
+for dir in /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/RAxML/het_*/KaKs_Calculator; do
+    find "$dir" -name "*kakscalculator.txt" -exec bash -c 'echo "$1" >> het_kaka_count.txt' _ {} \;
+done
+
+echo -e "Gene_variant\tPaml_Omega\tSNP_sites\tTotal_number_of_SNPs\tkaks_Omega" > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt
+for file in $(cat het_kaka_count.txt); do
+variant=$(echo $file | rev | cut -d '_' -f3,4,5,6 | rev | cut -d '.' -f1,2,3)
+gene=$(echo $variant | cut -d '.' -f1,2)
+kaks=$(grep '>' $file | awk '{print $5}')
+paml_file=$(find "$(dirname "$file" | sed 's@KaKs_Calculator@paml@g')" -type f -name '*.N_corrected.out' -print)
+if [ -z "$paml_file" ]; then
+    dnds="unfinished"
+else
+    dnds=$(grep 'omega (dN/dS)' "$paml_file" | rev | cut -d ' ' -f1 | rev)
+fi
+if [ -e "/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf" ]; then
+sites=$(cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf | grep '1/1\|0/1' | wc -l)
+SNPs=$(cat /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS2/variants/MYZPE13164_O_EIv2.1.CDS_${variant}.vcf | grep -o '1/1\|0/1' | wc -l)
+if [ "${sites}" -eq 0 ]; then
+echo -e "${variant}\t${dnds}\t0\t0\t${kaks}" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt
+else
+echo -e "${variant}\t${dnds}\t${sites}\t${SNPs}\t${kaks}" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt
+fi
+else
+echo -e "${variant}\t${dnds}\tNA\tNA\t${kaks}" >> /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt
+fi
+done
+```
+#### Enrichment analysis of gene variants under selection
+
+Gene annotations were performed by J.Goldberg by interproscan and results processed by AGAT's manage_functional_annotation.pl script. These were compiled into one file:
+```python
+from collections import defaultdict
+
+additional_annotations = defaultdict(list)
+additional_files = [
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/PRINTS.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/ProSitePatterns.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/ProSiteProfiles.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/Reactome.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/SFLD.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/SMART.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/SUPERFAMILY.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/TIGRFAM.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/PIRSF.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/Hamap.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/MetaCyc.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/Coils.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/CDD.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/Pfam.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/PANTHER.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/GO.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/KEGG.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/Gene3D.txt',
+    '/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/InterPro.txt'
+]
+
+for filename in additional_files:
+    with open(filename, 'r') as file:
+        for line in file:
+            gene_id, annotations = line.strip().split(maxsplit=1)
+            additional_annotations[gene_id].append(annotations)
+
+combined_annotations = {}
+for gene_id, annotations_list in additional_annotations.items():
+    combined_annotations[gene_id] = ','.join(annotations_list)
+
+with open('/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1_combined_annotations.txt', 'w') as combined_file:
+    for gene_id, annotations in combined_annotations.items():
+        combined_file.write(f"{gene_id}\t{annotations}\n")
+```
+Collect gene names with positive and purifying selection:
+```bash
+awk 'NF==5 && $5 ~ /^[0-9]+(\.[0-9]+)?$/ {print}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | wc -l #29,710 have a kaks estimate
+awk -F'\t' 'NF==5 && $5 ~ /^[0-9]*\.?[0-9]+$/ && $5 > 1' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | wc -l #9,892 are under diversifying selection (omega >1)
+awk -F'\t' 'NF==5 && $5 ~ /^[0-9]*\.?[0-9]+$/ && $5 < 1' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | wc -l #19,874 are under purifying selection (omega <1)
+
+awk 'NF==5 && $5 ~ /^[0-9]+(\.[0-9]+)?$/ {print}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | grep '0.001' | wc -l #5,047 have the lowest possible kaks
+awk -F'\t' 'NF==5 && $5 ~ /^[0-9]*\.?[0-9]+$/ && $5 < 0.5' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | wc -l #17,229 are under purifying selection (omega <0.5)
+awk -F'\t' 'NF==5 && $5 ~ /^[0-9]*\.?[0-9]+$/ && $5 == "0.001" {print}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | awk '{print $1}' > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/top_purifying_genes.txt
+awk -F'\t' 'NF==5 && $5 ~ /^[0-9]*\.?[0-9]+$/ && $5 < 0.5' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | awk '{print $1}' > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/purifying_genes.txt
+
+awk -F'\t' 'NF==5 && $5 ~ /^[0-9]+(\.[0-9]+)?$/ && $5 == "50" {print}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | wc -l #1,051 have the highest possible kaks
+awk -F'\t' 'NF==5 && $5 ~ /^[0-9]+(\.[0-9]+)?$/ && $5 == "50" {print}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | awk '{print $1}' > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/top_diversifying_genes.txt
+awk 'NF==5 && $5 ~ /^[0-9]+(\.[0-9]+)?$/ {print}' /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/heterozygous_omega_kaks.txt | sort -k5,5n | tail -n 2971 | awk '{print $1}' > /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/diversifying_genes.txt
+```
+Build Fischers contingeny tables:
+```bash
+Annotations=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/MYZPE13164_O_EIv2.1_combined_annotations.txt
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered
+mkdir ${OutDir}/diversifying_tables
+mkdir ${OutDir}/top_diversifying_tables
+mkdir ${OutDir}/purifying_tables
+mkdir ${OutDir}/top_purifying_tables
+
+#For the 10% of genes with the highest kaks:
+In=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/diversifying_genes.txt
+grep -v -f $In $Annotations | awk '{print $1}' > temp_xxx.txt
+Out=temp_xxx.txt
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/IPR_prep_tables.py \
+    --interpro $Annotations \
+    --set1_name test_sest \
+    --set2_name other \
+    --set1 $In \
+    --set2 $Out \
+    --outdir ${OutDir}/diversifying_tables
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/optparse1.7.1.sif Rscript ~/git_repos/Scripts/NBI/fishertest.r --in_dir ${OutDir}/diversifying_tables  --out_file ${OutDir}/diversifying_tables_results.tsv
+awk -F'\t' '$2 < 0.05' ${OutDir}/diversifying_tables_results.tsv | awk '$3 < 0.05' | cut -f1 > ${OutDir}/diversifying_significant_greater_annotations.txt
+awk -F'\t' '$2 < 0.05' ${OutDir}/diversifying_tables_results.tsv | awk '$4 < 0.05' | cut -f1 > ${OutDir}/diversifying_significant_fewer_annotations.txt
+echo -e "Annotation\tExperimental_Set_Count\tOthers_Count" > ${OutDir}/temp.txt
+for annotation in $(cat ${OutDir}/diversifying_significant_greater_annotations.txt); do
+    cat ${OutDir}/diversifying_tables/${annotation}_fischertable.txt | grep $annotation >> ${OutDir}/temp.txt
+done
+mv ${OutDir}/temp.txt ${OutDir}/diversifying_significant_greater_annotations.txt #2268
+echo -e "Annotation\tExperimental_Set_Count\tOthers_Count" > ${OutDir}/temp.txt
+for annotation in $(cat ${OutDir}/diversifying_significant_fewer_annotations.txt); do
+    cat ${OutDir}/diversifying_tables/${annotation}_fischertable.txt | grep $annotation >> ${OutDir}/temp.txt
+done
+mv ${OutDir}/temp.txt ${OutDir}/diversifying_significant_fewer_annotations.txt #200
+
+
+#For genes with the highest possible kaks:
+In=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/top_diversifying_genes.txt
+grep -v -f $In $Annotations | awk '{print $1}' > temp_xxx.txt
+Out=temp_xxx.txt
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/IPR_prep_tables.py \
+    --interpro $Annotations \
+    --set1_name test_sest \
+    --set2_name other \
+    --set1 $In \
+    --set2 $Out \
+    --outdir ${OutDir}/top_diversifying_tables
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/optparse1.7.1.sif Rscript ~/git_repos/Scripts/NBI/fishertest.r --in_dir ${OutDir}/top_diversifying_tables  --out_file ${OutDir}/top_diversifying_tables_results.tsv
+awk -F'\t' '$2 < 0.05' ${OutDir}/top_diversifying_tables_results.tsv | awk '$3 < 0.05' | cut -f1 > ${OutDir}/top_diversifying_significant_greater_annotations.txt
+awk -F'\t' '$2 < 0.05' ${OutDir}/top_diversifying_tables_results.tsv | awk '$4 < 0.05' | cut -f1 > ${OutDir}/top_diversifying_significant_fewer_annotations.txt
+echo -e "Annotation\tExperimental_Set_Count\tOthers_Count" > ${OutDir}/temp.txt
+for annotation in $(cat ${OutDir}/top_diversifying_significant_greater_annotations.txt); do
+    cat ${OutDir}/top_diversifying_tables/${annotation}_fischertable.txt | grep $annotation >> ${OutDir}/temp.txt
+done
+mv ${OutDir}/temp.txt ${OutDir}/top_diversifying_significant_greater_annotations.txt #1022
+echo -e "Annotation\tExperimental_Set_Count\tOthers_Count" > ${OutDir}/temp.txt
+for annotation in $(cat ${OutDir}/top_diversifying_significant_fewer_annotations.txt); do
+    cat ${OutDir}/top_diversifying_tables/${annotation}_fischertable.txt | grep $annotation >> ${OutDir}/temp.txt
+done
+mv ${OutDir}/temp.txt ${OutDir}/top_diversifying_significant_fewer_annotations.txt #17
+
+
+#For genes with kaks below 0.5:
+In=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/purifying_genes.txt
+grep -v -f $In $Annotations | awk '{print $1}' > temp_xxx.txt
+Out=temp_xxx.txt
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/IPR_prep_tables.py \
+    --interpro $Annotations \
+    --set1_name test_sest \
+    --set2_name other \
+    --set1 $In \
+    --set2 $Out \
+    --outdir ${OutDir}/purifying_tables
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/optparse1.7.1.sif Rscript ~/git_repos/Scripts/NBI/fishertest.r --in_dir ${OutDir}/purifying_tables  --out_file ${OutDir}/purifying_tables_results.tsv
+awk -F'\t' '$2 < 0.05' ${OutDir}/purifying_tables_results.tsv | awk '$3 < 0.05' | cut -f1 > ${OutDir}/purifying_significant_greater_annotations.txt
+awk -F'\t' '$2 < 0.05' ${OutDir}/purifying_tables_results.tsv | awk '$4 < 0.05' | cut -f1 > ${OutDir}/purifying_significant_fewer_annotations.txt
+echo -e "Annotation\tExperimental_Set_Count\tOthers_Count" > ${OutDir}/temp.txt
+for annotation in $(cat ${OutDir}/purifying_significant_greater_annotations.txt); do
+    cat ${OutDir}/purifying_tables/${annotation}_fischertable.txt | grep $annotation >> ${OutDir}/temp.txt
+done
+mv ${OutDir}/temp.txt ${OutDir}/purifying_significant_greater_annotations.txt #8008
+echo -e "Annotation\tExperimental_Set_Count\tOthers_Count" > ${OutDir}/temp.txt
+for annotation in $(cat ${OutDir}/purifying_significant_fewer_annotations.txt); do
+    cat ${OutDir}/purifying_tables/${annotation}_fischertable.txt | grep $annotation >> ${OutDir}/temp.txt
+done
+mv ${OutDir}/temp.txt ${OutDir}/purifying_significant_fewter_annotations.txt #1237
+
+
+#For genes with the lowest possible kaks:
+In=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/top_purifying_genes.txt
+grep -v -f $In $Annotations | awk '{print $1}' > temp_xxx.txt
+Out=temp_xxx.txt
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/IPR_prep_tables.py \
+    --interpro $Annotations \
+    --set1_name test_sest \
+    --set2_name other \
+    --set1 $In \
+    --set2 $Out \
+    --outdir ${OutDir}/top_purifying_tables
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/optparse1.7.1.sif Rscript ~/git_repos/Scripts/NBI/fishertest.r --in_dir ${OutDir}/top_purifying_tables  --out_file ${OutDir}/top_purifying_tables_results.tsv
+awk -F'\t' '$2 < 0.05' ${OutDir}/top_purifying_tables_results.tsv | awk '$3 < 0.05' | cut -f1 > ${OutDir}/top_purifying_significant_greater_annotations.txt
+awk -F'\t' '$2 < 0.05' ${OutDir}/top_purifying_tables_results.tsv | awk '$4 < 0.05' | cut -f1 > ${OutDir}/top_purifying_significant_fewer_annotations.txt
+echo -e "Annotation\tExperimental_Set_Count\tOthers_Count" > ${OutDir}/temp.txt
+for annotation in $(cat ${OutDir}/top_purifying_significant_greater_annotations.txt); do
+    cat ${OutDir}/top_purifying_tables/${annotation}_fischertable.txt | grep $annotation >> ${OutDir}/temp.txt
+done
+mv ${OutDir}/temp.txt ${OutDir}/top_purifying_significant_greater_annotations.txt #5570
+echo -e "Annotation\tExperimental_Set_Count\tOthers_Count" > ${OutDir}/temp.txt
+for annotation in $(cat ${OutDir}/top_purifying_significant_fewer_annotations.txt); do
+    cat ${OutDir}/top_purifying_tables/${annotation}_fischertable.txt | grep $annotation >> ${OutDir}/temp.txt
+done
+mv ${OutDir}/temp.txt ${OutDir}/top_purifying_significant_fewer_annotations.txt #744
+
+#Extract Go terms:
+grep 'GO:' ${OutDir}/diversifying_significant_greater_annotations.txt | cut -f1 > ../temp_out.txt #164
+grep 'GO:' ${OutDir}/top_purifying_significant_greater_annotations.txt | cut -f1 > ../temp_out.txt #383
+```
+Retreive GO term info:
+```R
+# Load required libraries
+library(httr)
+library(jsonlite)
+
+go_codes_file <- "temp_out.txt"  
+#output_file <- "diversifying_significant_greater_annotations_go_terms_output.txt"  
+output_file <- "top_purifying_significant_greater_annotations_go_terms_output.txt" 
+
+go_references <- readLines(go_codes_file)
+
+retrieve_go_term_info <- function(go_reference) {
+  url <- paste0("https://www.ebi.ac.uk/QuickGO/services/ontology/go/terms/", go_reference)
+  response <- httr::GET(url)
+  if (httr::status_code(response) == 200) {
+    data <- jsonlite::fromJSON(httr::content(response, "text"))
+    term <- data$results$name
+    definition <- data$results$definition$text
+    return(list(GO_Reference = go_reference, Term = term, Definition = definition))
+  } else {
+    return(paste("Failed to retrieve information for GO Term:", go_reference))
+  }
+}
+
+sink(output_file)
+
+for (go_reference in go_references) {
+  info <- retrieve_go_term_info(go_reference)
+  if (is.character(info)) {
+    cat(info, "\n")
+  } else {
+    cat("GO Term:", info$GO_Reference, "\n")
+    cat("Term:", info$Term, "\n")
+    cat("Definition:", info$Definition, "\n\n")
+  }
+}
+
+sink()
+```
+#### TopGO
+```bash
+/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/outdir_CloneO_InterPro/MYZPE13164_O_EIv2.tsv
+/jic/scratch/groups/Saskia-Hogenhout/Jay/cloneO_FunctionalAnnotation/CloneO_w_interpro_blastp/InterPro.txt
+
+OutDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/purifying
+mkdir -p $OutDir
+
+InGroupGenes=$(ls gene_pred/interproscan/F.proliferatum/A8_ncbi/A8_ncbi_interproscan.tsv)
+OutGroupGenes=$(ls gene_pred/interproscan/F.proliferatum/A8_ncbi/A8_ncbi_interproscan.tsv)
+
+cat $InGroupGenes | sed -e 's/^/In_/g' > $OutDir/Fp_FoC_interproscan.tsv
+cat $OutGroupGenes | sed -e 's/^/Out_/g' >> $OutDir/Fp_FoC_interproscan.tsv
+
+~/git_repos/Scripts/NBI/GO_prep_table.py --interpro $OutDir/Fp_FoC_interproscan.tsv > $OutDir/Fp_FoC_GO_annots.tsv
+
+cat $OutDir/Fp_FoC_GO_annots.tsv | cut -f1 | grep 'In_' | sed -e 's/$/\t0.001/g'> $OutDir/In_genes.txt
+cat $OutDir/Fp_FoC_GO_annots.tsv | cut -f1 | grep 'Out_' | sed -e 's/$/\t1.00/g' > $OutDir/Out_genes.txt
+cat $OutDir/In_genes.txt $OutDir/Out_genes.txt > $OutDir/Fp_FoC_all_genes.txt
+
+~/git_repos/Scripts/NBI/GO_enrichment.r --all_genes $OutDir/Fp_FoC_all_genes.txt --GO_annotations $OutDir/Fp_FoC_GO_annots.tsv --out_dir $OutDir > $OutDir/output.txt
 ```
 ### Between M. persicae and related species <a name="16"></a>
 
@@ -1429,10 +2105,12 @@ mkdir /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/ortholo
 for fasta in $(find /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/orthology/orthofinder/persicae_v_ligustri/orthogroups_fasta -name "orthogroupOG*.fa" -exec readlink -f {} \;); do
     if grep -q '^>MYZ' "$fasta" && grep -q '^>LIG' "$fasta"; then
     OutFile=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/analysis/orthology/orthofinder/persicae_v_ligustri/orthogroups_fasta/paired/$(basename $fasta | sed 's@.fa@_paired.fa@g')
-    singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/find_longest_myzlig.py $fasta $OutFile
+    singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/find_longest_orth.py $fasta $OutFile
     fi
 done
 ```
+
+
 Find longest ortholog for all related aphid species, where an ortholog is present in at least 10 species: (INCOMPLETE)
 ```bash
   ProjDir=/jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
@@ -1524,7 +2202,7 @@ Id_field=1
 orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
 mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
 
-#Taxon_code=DREpla
+#Taxon_code=DREpla #No protein sequences available?
 #Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Drepanosiphum_platanoidis/)
 #Id_field=1
 #orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
@@ -1584,7 +2262,7 @@ Id_field=1
 orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
 mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
 
-#Taxon_code=PEMphi
+#Taxon_code=PEMphi #No genomes available?
 #Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Pemphigus_spyrothecae/)
 #Id_field=1
 #orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
@@ -1608,11 +2286,11 @@ Id_field=1
 orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
 mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
 
-#Taxon_code=RHOmai #####this crashes orthofinder for some reason
-#Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Rhopalosiphum_maidis/v1/rmaidis_v2.gff3.prot.fa)
-#Id_field=1
-#orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
-#mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+Taxon_code=RHOmai #####this crashes orthofinder for some reason
+Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Rhopalosiphum_maidis/GCF_003676215.2/protein.faa)
+Id_field=1
+orthomclAdjustFasta  $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
 
 Taxon_code=RHOpad
 Fasta_file=$(ls /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Rhopalosiphum_padi/JIC1_v1/Rhopalosiphum_padi_JIC1_v1.scaffolds.braker.aa.fa)
@@ -1655,7 +2333,7 @@ orthomclFilterFasta $Input_dir $Min_length $Max_percent_stops $Good_proteins_fil
 done
 
 sbatch ~/git_repos/Wrappers/NBI/run_orthofinder.sh $WorkDir 
-#57528443,57528511
+#57528443,57528511,58043113(formatted2 with RHOmai)
 
 OrthogroupsTxt=$WorkDir/formatted/OrthoFinder/*/Orthogroups/Orthogroups.txt
 GoodProts=$WorkDir/goodProteins/goodProteins.fasta

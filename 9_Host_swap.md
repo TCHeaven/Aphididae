@@ -558,7 +558,7 @@ for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae
     ProgDir=~/git_repos/Wrappers/NBI
     sbatch $ProgDir/run_raw_bs_read_qc.sh $OutDir $Reference_genome $Gff $Fread $Rread 
 done
-#57853831-878
+#57853991-57854038
 
 for ReadDir in $(ls -d /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/dna_qc/Myzus/persicae/WGS/Archana_Feb2021/*/trim_galore); do
 sample=$(echo $ReadDir | rev | cut -d '/' -f2 | rev)
