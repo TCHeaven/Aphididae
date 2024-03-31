@@ -3776,6 +3776,7 @@ Trinity --full_cleanup --seqType fq --CPU 64 --max_memory 4030G --min_kmer_cov 2
 #57765347 - check for errors after the 99.994% sticking point that will now be forced but have not been run in isolation?
 
 cp /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome.Trinity.fasta /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome.Trinity-force1.fasta
+rm -rf /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/M_persicae_trinity_transcriptome #intermediate files deleted as taking up 1.5TB of space
 ```
 
 ```bash

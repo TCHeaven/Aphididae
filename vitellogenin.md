@@ -126,3 +126,83 @@ transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_
 transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_MYZPE13164_O_EIv2.1_0213490.1_CDS.fa -outseq het_MYZPE13164_O_EIv2.1_0213490.1_CDS.aa.fa -frame 1
 transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_MYZPE13164_O_EIv2.1_0213490.2_CDS.fa -outseq het_MYZPE13164_O_EIv2.1_0213490.2_CDS.aa.fa -frame 1
 ```
+### White gene
+Reuben says that MYZPE13164_O_EIv2.1_0184430 is the white gene
+```bash
+#Reference gene sequence:
+grep -A 1 'MYZPE13164_O_EIv2.1_0184430' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.gene.fa > MYZPE13164_O_EIv2.1_0184430.fa
+#ReferenceCDS sequence:
+grep -A 1 'MYZPE13164_O_EIv2.1_0184430.1' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.nt.CDS.fa > MYZPE13164_O_EIv2.1_0184430.1.fa
+#VCF SNP file, gene region, for 193 individuals:
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/dedup_MYZPE13164_O_EIv2.1_0184430_snps.vcf
+
+#Gene sequence multifasta for 193 individuals:
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/hom_gene_fastas/hom_MYZPE13164_O_EIv2.1_0184430.fa
+ls /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_gene/het_gene_fastas/het_MYZPE13164_O_EIv2.1_0184430.fa
+#CDS sequence multifasta for 193 individuals:
+cp /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0184430.1_CDS+.fa .
+cp /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_MYZPE13164_O_EIv2.1_0184430.1_CDS+.fa .
+
+#Get aa sequences:
+source package /nbi/software/production/bin/emboss-6.5.7
+grep -A 1 'MYZPE13164_O_EIv2.1_0184430.1' /jic/research-groups/Saskia-Hogenhout/TCHeaven/Genomes/Myzus/persicae/O_v2/MYZPE13164_O_EIv2.1.annotation_singleline.gff3.aa.fa > white_1.aa.fa
+transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/hom_CDS_fastas/hom_MYZPE13164_O_EIv2.1_0184430.1_CDS+.fa -outseq hom_MYZPE13164_O_EIv2.1_0184430.1_CDS.aa.fa
+transeq -sequence /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/snps_per_CDS/het_CDS_fastas/het_MYZPE13164_O_EIv2.1_0184430.1_CDS+.fa -outseq het_MYZPE13164_O_EIv2.1_0184430.1_CDS.aa.fa
+
+echo scaffold_2 > temp.txt
+singularity exec /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/containers/python3.sif python3 ~/git_repos/Scripts/NBI/seq_get.py --id_file ./temp.txt --input /jic/research-groups/Saskia-Hogenhout/Tom_Mathers/aphid_genomes_db/Myzus_persicae/O_v2/Myzus_persicae_O_v2.0.scaffolds.fa --output scaffold2.fa
+```
+```python
+def extract_characters_from_fasta(fasta_file, start, end):
+	sequence = ""
+	with open(fasta_file, 'r') as f:
+		header = None
+		for line in f:
+			if line.startswith('>'): 
+				if sequence:  
+					return sequence[start - 1:end]  
+				header = line.rstrip()
+				sequence = ""
+			else:
+				sequence += line.strip()
+		if sequence:
+			return sequence[start - 1:end]
+
+# Example usage:
+fasta_file = "scaffold2.fa"
+start_pos = 63553919
+end_pos = 63554147
+extracted_sequence = extract_characters_from_fasta(fasta_file, start_pos, end_pos)
+print(extracted_sequence)
+
+```
+scaffold_2      MYZPE13164_O_EIv2.1     gene    63534977        63556269        1.05e+03        +       .       ID=MYZPE13164_O_EIv2.1_0184430;Name=MYZPE13164_O_EIv2.1_0184430;biotype=pro$
+scaffold_2      MYZPE13164_O_EIv2.1     mRNA    63534977        63556269        1.05e+03        +       .       ID=MYZPE13164_O_EIv2.1_0184430.1;Parent=MYZPE13164_O_EIv2.1_0184430;Name=MY$
+scaffold_2      MYZPE13164_O_EIv2.1     five_prime_UTR  63534977        63535241        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.five_prime_UTR1;Parent=MYZPE13164_O_EIv2.1$
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63534977        63535340        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon1;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63535242        63535340        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS1;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63547435        63547612        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS2;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63547435        63547612        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon2;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63548087        63548325        .       +       2       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS3;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63548087        63548325        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon3;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63549869        63549940        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS4;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63549869        63549940        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon4;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63550024        63550122        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS5;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63550024        63550122        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon5;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63550361        63550599        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS6;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63550361        63550599        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon6;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63552489        63552672        .       +       1       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS7;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63552489        63552672        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon7;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63553055        63553210        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS8;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63553055        63553210        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon8;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63553278        63553409        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS9;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63553278        63553409        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon9;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63553919        63554147        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS10;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63553919        63554147        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon10;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63554994        63555099        .       +       2       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS11;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63554994        63555099        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon11;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63555299        63555470        .       +       1       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS12;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63555299        63555470        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon12;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     CDS     63555653        63555751        .       +       0       ID=MYZPE13164_O_EIv2.1_0184430.1.CDS13;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     exon    63555653        63556269        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.exon13;Parent=MYZPE13164_O_EIv2.1_0184430.1
+scaffold_2      MYZPE13164_O_EIv2.1     three_prime_UTR 63555752        63556269        .       +       .       ID=MYZPE13164_O_EIv2.1_0184430.1.three_prime_UTR1;Parent=MYZPE13164_O_EIv2.$
