@@ -1753,7 +1753,7 @@ while [ $Jobs -gt 199 ]; do
     printf "."
     Jobs=$(squeue -u did23faz| grep 'did23faz'| wc -l)
 done
-mkdir $OutDir
+mkdir -p $OutDir
 sbatch $ProgDir/run_KaKs_Calculator.sh $Seqfile $OutDir
 done
 

@@ -981,7 +981,7 @@ plink --bfile /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_call
 #Pruned 1902203 variants from chromosome 4, leaving 193359.
 #Pruned 963227 variants from chromosome 5, leaving 105113.
 #Pruned 898708 variants from chromosome 6, leaving 95341.
-#Pruning complete.  10722703 of 11839311 variants removed.
+#Pruning complete.  10,722,703 of 11,839,311 variants removed.
 plink --bfile /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink/193s.M_persicae.onlySNPs_sorted --extract /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink/193s.M_persicae.onlySNPs_sorted_pruned.prune.in --make-bed --out /jic/scratch/groups/Saskia-Hogenhout/tom_heaven/Aphididae/snp_calling/Myzus/persicae/biello/gatk/filtered/plink/193s.M_persicae.onlySNPs_sorted_pruned_set
 
 for K in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40; \
